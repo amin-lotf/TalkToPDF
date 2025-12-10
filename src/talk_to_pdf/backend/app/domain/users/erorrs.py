@@ -1,0 +1,2 @@
+class EmailAlreadyRegisteredError(Exception):
+    pass
