@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "talktopdf"
+version = "0.1.0"
+description = "Talk to your PDF"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.124.0",
+    "sqlalchemy>=2.0.45",
+]
+
+
+
+[project.optional-dependencies]
+ui = [
+  "streamlit>=1.38",
+  "pandas-stubs>=2.2",
+]
+
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.23",
+  "mypy>=1.10",
+]
+
+
+# optional CLI commands
+[project.scripts]
+talk = "talk_to_pdf.cli:main"
+
+
+
+
+# tell setuptools where to find your package (under src/)
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["talk_to_pdf*"]
