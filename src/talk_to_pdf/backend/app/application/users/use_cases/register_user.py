@@ -1,14 +1,13 @@
 from __future__ import annotations
 from typing import Protocol
-from talk_to_pdf.backend.app.application.users import RegisterUserInput, RegisterUserOutput, input_dto_to_domain, \
-    domain_to_output_dto
+from talk_to_pdf.backend.app.application.users import RegisterUserInput, RegisterUserOutput
+from talk_to_pdf.backend.app.application.users.mappers import register_input_dto_to_domain, register_domain_to_output_dto
+from talk_to_pdf.backend.app.application.users.use_cases.protocols import PasswordHasher
 from talk_to_pdf.backend.app.domain.users import RegistrationError
 from talk_to_pdf.backend.app.domain.users.repositories import UserRepository
 
 
-class PasswordHasher(Protocol):
-    def hash(self, raw_password: str) -> str:
-        ...
+
 
 
 class RegisterUserUseCase:
@@ -25,7 +24,7 @@ class RegisterUserUseCase:
         if existing is not None:
             raise RegistrationError(f"Email {data.email} is already in use")
         hashed = self._password_hasher.hash(data.password)
-        user = input_dto_to_domain(data)
+        user = register_input_dto_to_domain(data)
         user.hashed_password = hashed
         saved = await self._user_repo.add(user)
-        return domain_to_output_dto(saved)
+        return register_domain_to_output_dto(saved)
