@@ -1,2 +1,2 @@
-class EmailAlreadyRegisteredError(Exception):
+class RegistrationError(Exception):
     pass

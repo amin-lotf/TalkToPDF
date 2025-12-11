@@ -2,7 +2,7 @@ from talk_to_pdf.backend.app.application.users import RegisterUserOutput, Regist
 from talk_to_pdf.backend.app.domain.users import User
 
 
-def domain_to_dto(user:User)->RegisterUserOutput:
+def domain_to_output_dto(user:User)->RegisterUserOutput:
     return RegisterUserOutput(
         id=user.id,
         email=str(user.email),
@@ -10,7 +10,7 @@ def domain_to_dto(user:User)->RegisterUserOutput:
         created_at=user.created_at
     )
 
-def dto_to_domain(data:RegisterUserInput)->User:
+def input_dto_to_domain(data:RegisterUserInput)->User:
     from talk_to_pdf.backend.app.domain.users import UserEmail
     return User(
         id=None,
