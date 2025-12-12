@@ -1,11 +1,7 @@
 from __future__ import annotations
-
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
-
 from talk_to_pdf.backend.app.api.v1.users import UserResponse, RegisterUserRequest, TokenResponse, LoginRequest
 from talk_to_pdf.backend.app.api.v1.users.deps import get_register_user_use_case, get_login_user_use_case, \
     get_logged_in_user
@@ -23,6 +19,7 @@ register_user_dep=Annotated[RegisterUserUseCase, Depends(get_register_user_use_c
 login_user_dep=Annotated[LoginUserUseCase, Depends(get_login_user_use_case)]
 logged_in_user_dep=Annotated[CurrentUserDTO, Depends(get_logged_in_user)]
 
+
 @router.post(
     "/register",
     response_model=UserResponse,
@@ -30,8 +27,10 @@ logged_in_user_dep=Annotated[CurrentUserDTO, Depends(get_logged_in_user)]
 )
 async def register_user(
     body: RegisterUserRequest,
-    use_case: register_user_dep,
+    use_case: register_user_dep
 ) -> UserResponse:
+
+
     try:
         input_dto=request_to_input_dto(body)
         result: RegisterUserOutput = await use_case.execute(input_dto)

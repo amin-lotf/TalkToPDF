@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 from uuid import UUID
 from fastapi import HTTPException, status
@@ -11,8 +12,12 @@ from talk_to_pdf.backend.app.core import get_uow
 from talk_to_pdf.backend.app.core.security import decode_access_token
 from talk_to_pdf.backend.app.domain.users import UserNotFoundError
 from talk_to_pdf.backend.app.infrastructure.db import UnitOfWork
+from talk_to_pdf.backend.app.core.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/token",
+    auto_error= not settings.SKIP_AUTH
+)
 
 
 def get_password_hasher() -> BcryptPasswordHasher:
@@ -38,8 +43,11 @@ async def get_current_user_use_case(
 ) -> GetCurrentUserUseCase:
     return GetCurrentUserUseCase(uow.user_repo)
 
+DEV_USER = CurrentUserDTO(id=uuid.uuid4(), email="dev@example.com", name="Dev", is_active=True)
 
-async def get_jwt_payload(token: Annotated[str, Depends(oauth2_scheme)]) -> dict:
+async def get_jwt_payload(token: Annotated[str|None, Depends(oauth2_scheme)]) -> dict:
+    if settings.SKIP_AUTH:
+        return {"sub": str(DEV_USER.id)}
     try:
         payload = decode_access_token(token)
         return payload
@@ -51,9 +59,12 @@ async def get_jwt_payload(token: Annotated[str, Depends(oauth2_scheme)]) -> dict
 
 
 async def get_logged_in_user(
-        payload: dict = Depends(get_jwt_payload),
-        use_case: GetCurrentUserUseCase = Depends(get_current_user_use_case),
+        payload: Annotated[dict , Depends(get_jwt_payload)],
+        use_case: Annotated[GetCurrentUserUseCase, Depends(get_current_user_use_case)],
 ) -> CurrentUserDTO:
+    print(settings.SKIP_AUTH)
+    if settings.SKIP_AUTH:
+        return DEV_USER
     sub = payload.get("sub")
     if sub is None:
         raise HTTPException(
@@ -83,3 +94,5 @@ async def get_logged_in_user(
             detail="Inactive user",
         )
     return user
+
+

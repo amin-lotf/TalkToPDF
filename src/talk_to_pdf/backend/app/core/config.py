@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     SQLALCHEMY_DATABASE_URL: str = 'xxx'
     JWT_SECRET_KEY: str = 'xxx'
     JWT_ALGORITHM: str = 'xxx'
+    SKIP_AUTH: bool = False
 
 
 settings = Settings()
