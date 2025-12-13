@@ -1,17 +1,19 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional
-from uuid import UUID
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from .value_objects import UserEmail
+from ..common import utcnow
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class User:
-    id: Optional[UUID]
     email: UserEmail
     name: str
-    hashed_password: Optional[str]
+    hashed_password: str | None
+
+    id: UUID = field(default_factory=uuid4)
     is_active: bool = True
-    created_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=utcnow)

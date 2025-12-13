@@ -24,7 +24,6 @@ class RegisterUserUseCase:
         if existing is not None:
             raise RegistrationError(f"Email {data.email} is already in use")
         hashed = self._password_hasher.hash(data.password)
-        user = register_input_dto_to_domain(data)
-        user.hashed_password = hashed
+        user = register_input_dto_to_domain(data,hashed)
         saved = await self._user_repo.add(user)
         return register_domain_to_output_dto(saved)

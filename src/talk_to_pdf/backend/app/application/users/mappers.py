@@ -11,15 +11,13 @@ def register_domain_to_output_dto(user:User)->RegisterUserOutput:
         created_at=user.created_at
     )
 
-def register_input_dto_to_domain(data:RegisterUserInput)->User:
+def register_input_dto_to_domain(data:RegisterUserInput,hashed_password:str)->User:
     from talk_to_pdf.backend.app.domain.users import UserEmail
     return User(
-        id=None,
         email=UserEmail(data.email),
         name=data.name,
-        hashed_password=None,
+        hashed_password=hashed_password,
         is_active=True,
-        created_at=None
     )
 
 def login_domain_to_output_dto(user:User)->LoginUserOutputDTO:

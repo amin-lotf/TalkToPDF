@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.users import User, RegistrationError
 from talk_to_pdf.backend.app.domain.users.repositories import UserRepository
-from talk_to_pdf.backend.app.infrastructure.users.mappers import model_to_domain, domain_to_model
+from talk_to_pdf.backend.app.infrastructure.users.mappers import user_model_to_domain, user_domain_to_model
 from talk_to_pdf.backend.app.infrastructure.users.models import UserModel
 
 
@@ -26,10 +26,10 @@ class SqlAlchemyUserRepository(UserRepository):
         model: Optional[UserModel] = result.scalar_one_or_none()
         if model is None:
             return None
-        return model_to_domain(model)
+        return user_model_to_domain(model)
 
     async def add(self, user: User) -> User:
-        model = domain_to_model(user)
+        model = user_domain_to_model(user)
         self._session.add(model)
         try:
             await self._session.flush()
@@ -37,12 +37,12 @@ class SqlAlchemyUserRepository(UserRepository):
             # most likely UNIQUE(email)
             raise RegistrationError(f"Email {user.email} already exists") from e
         await self._session.refresh(model)
-        return model_to_domain(model)
+        return user_model_to_domain(model)
 
     async def get_by_id(self, user_id: UUID) -> Optional[User]:
-        stmt = select(UserModel).where(UserModel.id == str(user_id))
+        stmt = select(UserModel).where(UserModel.id == user_id)
         result = await self._session.execute(stmt)
         model: Optional[UserModel] = result.scalar_one_or_none()
         if model is None:
             return None
-        return model_to_domain(model)
+        return user_model_to_domain(model)
