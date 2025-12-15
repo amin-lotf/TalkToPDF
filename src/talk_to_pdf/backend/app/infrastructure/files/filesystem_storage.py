@@ -49,3 +49,4 @@ class FilesystemFileStorage:
         full_path = self._base_dir / path
         if full_path.exists():
             full_path.unlink()
+            full_path.parent.rmdir()

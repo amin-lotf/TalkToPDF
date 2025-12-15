@@ -21,3 +21,9 @@ class FailedToDeleteProject(Exception):
         super().__init__(
             f"Failed to delete project with name {project_name}"
         )
+
+class FailedToDeleteProjectDocument(Exception):
+    def __init__(self, project_name: str):
+        super().__init__(
+            f"Failed to delete the document for the project with name {project_name}"
+        )

@@ -30,8 +30,9 @@ async def get_list_user_projects_use_case(
 
 async def get_delete_project_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)],
+        storage: Annotated[FileStorage, Depends(get_file_storage)]
 )->DeleteProjectUseCase:
-    return DeleteProjectUseCase(uow)
+    return DeleteProjectUseCase(uow,storage)
 
 async def get_rename_project_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)],
