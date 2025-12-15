@@ -43,7 +43,7 @@ def project_domain_to_model(p: Project) -> ProjectModel:
         raise ValueError("Project.primary_document is required to persist a Project")
     return ProjectModel(
         id=p.id,
-        name=str(p.name),
+        name=p.name.value,
         owner_id=p.owner_id,
         created_at=p.created_at,
         primary_document_id=p.primary_document.id,

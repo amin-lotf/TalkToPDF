@@ -35,7 +35,7 @@ async def create_project(
 
 
 
-@router.get("/projects", response_model=ListProjectsResponse)
+@router.get("", response_model=ListProjectsResponse)
 async def get_projects(
         user: logged_in_user_dep,
         use_case:get_list_projects_dep,

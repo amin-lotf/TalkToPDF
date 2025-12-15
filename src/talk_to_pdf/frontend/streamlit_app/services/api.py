@@ -1,7 +1,7 @@
 # talk_to_pdf/frontend/streamlit_app/services/api.py
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import httpx
 
@@ -66,6 +66,11 @@ class Api:
             timeout=timeout,
         )
 
+    def _auth_headers(self, access_token: Optional[str]) -> Dict[str, str]:
+        if not access_token:
+            return {}
+        return {"Authorization": f"Bearer {access_token}"}
+
     def close(self) -> None:
         self._client.close()
 
@@ -125,5 +130,70 @@ class Api:
             headers["Authorization"] = f"Bearer {access_token}"
 
         resp = self._client.get("/auth/me", headers=headers or None)
+        resp.raise_for_status()
+        return resp.json()
+
+        # ---------- Projects endpoints ----------
+
+    @handle_httpx_errors
+    def list_projects(self, access_token: Optional[str]) -> List[Dict[str, Any]]:
+        resp = self._client.get("/projects", headers=self._auth_headers(access_token) or None)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Accept common envelope keys
+        if isinstance(data, dict):
+            raw = (
+                    data.get("items")  # <-- your current backend
+                    or data.get("projects")
+                    or data.get("results")
+                    or []
+            )
+        else:
+            raw = data
+
+        # Normalize
+        out: List[Dict[str, Any]] = []
+        for item in raw:
+            if isinstance(item, dict):
+                out.append(item)
+            elif isinstance(item, str):
+                out.append({"id": item, "name": item})
+            else:
+                out.append({"id": str(item), "name": str(item)})
+        return out
+
+    @handle_httpx_errors
+    def get_project(self, access_token: Optional[str], project_id: str) -> Dict[str, Any]:
+        resp = self._client.get(f"/projects/{project_id}", headers=self._auth_headers(access_token) or None)
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def create_project(
+            self,
+            access_token: Optional[str],
+            *,
+            name: str,
+            file_name: str,
+            file_bytes: bytes,
+            content_type: str = "application/pdf",
+    ) -> Dict[str, Any]:
+        """
+        POST /projects/create
+        Backend expects multipart/form-data:
+          - name: Form(...)
+          - file: UploadFile = File(...)
+        """
+        files = {
+            "file": (file_name, file_bytes, content_type),
+        }
+        data = {"name": name}
+        resp = self._client.post(
+            "/projects/create",
+            headers=self._auth_headers(access_token) or None,
+            data=data,
+            files=files,
+        )
         resp.raise_for_status()
         return resp.json()
