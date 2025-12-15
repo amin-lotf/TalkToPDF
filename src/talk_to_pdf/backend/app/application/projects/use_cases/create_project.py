@@ -9,7 +9,7 @@ from talk_to_pdf.backend.app.application.projects.mappers import (
 from talk_to_pdf.backend.app.domain.files.errors import FailedToSaveFile
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.projects.errors import FailedToCreateProject
-from talk_to_pdf.backend.app.infrastructure.db import UnitOfWork
+from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
 
 
 class CreateProjectUseCase:

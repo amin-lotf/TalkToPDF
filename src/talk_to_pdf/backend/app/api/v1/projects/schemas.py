@@ -11,13 +11,12 @@ class CreateProjectRequest(BaseModel):
     JSON request body. Note: file upload will NOT be here.
     We'll take the file from `UploadFile = File(...)` in the endpoint.
     """
-    name: str = Field(min_length=2, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
 
 
 class ProjectDocumentResponse(BaseModel):
     id: UUID
     original_filename: str
-    download_url: str
     content_type: str
     size_bytes: int
     uploaded_at: datetime

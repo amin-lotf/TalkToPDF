@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = 'xxx'
     JWT_ALGORITHM: str = 'xxx'
     SKIP_AUTH: bool = False
+    FILE_STORAGE_DIR:str = 'xxx'
 
 
 settings = Settings()

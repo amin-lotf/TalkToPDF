@@ -31,6 +31,7 @@ def project_input_dto_to_domain(data:CreateProjectInputDTO)->Project:
     return Project(
         name=ProjectName(data.name),
         owner_id=data.owner_id,
+
     )
 
 
@@ -43,7 +44,7 @@ def build_project_with_main_document(
     document = ProjectDocument(
         project_id=project.id,  # repo / infra will wire this up
         original_filename=stored.original_filename,
-        storage_path=stored.path,
+        storage_path=stored.storage_path,
         content_type=stored.content_type,
         size_bytes=stored.size_bytes,
     )

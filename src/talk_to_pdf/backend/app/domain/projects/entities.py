@@ -25,7 +25,7 @@ class ProjectDocument:
 class Project:
     name: ProjectName
     owner_id: UUID
-    primary_document: ProjectDocument
+    primary_document: Optional[ProjectDocument] = None
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=utcnow)
 

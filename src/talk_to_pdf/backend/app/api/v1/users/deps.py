@@ -43,7 +43,7 @@ async def get_current_user_use_case(
 ) -> GetCurrentUserUseCase:
     return GetCurrentUserUseCase(uow)
 
-DEV_USER = CurrentUserDTO(id=uuid.uuid4(), email="dev@example.com", name="Dev", is_active=True)
+DEV_USER = CurrentUserDTO(id=UUID('66449af6-23c2-4bd9-8d66-369d67c548e0'), email="dev@example.com", name="Dev", is_active=True)
 
 async def get_jwt_payload(token: Annotated[str|None, Depends(oauth2_scheme)]) -> dict:
     if settings.SKIP_AUTH:
