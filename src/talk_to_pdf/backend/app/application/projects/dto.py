@@ -15,6 +15,10 @@ class CreateProjectInputDTO:
     filename: str
     content_type: str
 
+@dataclass(frozen=True)
+class GetProjectInputDTO:
+    owner_id: UUID
+    project_id: UUID
 
 
 @dataclass(frozen=True)
@@ -49,4 +53,4 @@ class ProjectDTO:
     name: str
     owner_id: UUID
     created_at: datetime
-    main_document: ProjectDocumentDTO
+    primary_document: ProjectDocumentDTO

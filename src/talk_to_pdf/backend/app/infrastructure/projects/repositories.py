@@ -38,10 +38,11 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         await self._session.refresh(dm)
         return create_project_domain_from_models(pm, dm)
 
-    async def get_by_id(self, project_id: UUID) -> Optional[Project]:
+    async def get_by_id(self, owner_id: UUID, project_id: UUID) -> Optional[Project]:
         stmt = (
             select(ProjectModel, ProjectDocumentModel)
             .join(ProjectDocumentModel, ProjectDocumentModel.id == ProjectModel.primary_document_id)
+            .where(ProjectModel.owner_id == owner_id)
             .where(ProjectModel.id == project_id)
         )
         res = await self._session.execute(stmt)

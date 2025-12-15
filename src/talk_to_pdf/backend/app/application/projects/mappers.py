@@ -24,7 +24,7 @@ def project_domain_to_output_dto(project: Project) -> ProjectDTO:
         name=str(project.name),
         owner_id=project.owner_id,
         created_at=project.created_at,
-        main_document=doc_dto,
+        primary_document=doc_dto,
     )
 
 def project_input_dto_to_domain(data:CreateProjectInputDTO)->Project:
