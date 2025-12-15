@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from talk_to_pdf.backend.app.api.v1.router import api_router
-from talk_to_pdf.backend.app.infrastructure.db import init_db
+from talk_to_pdf.backend.app.exception_handlers import register_exception_handlers
+from talk_to_pdf.backend.app.infrastructure.db.init_db import init_db
 
 
 def create_app():
@@ -16,6 +17,8 @@ def create_app():
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    register_exception_handlers(app)
     return app
 
 app = create_app()

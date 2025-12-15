@@ -11,7 +11,7 @@ from talk_to_pdf.backend.app.core import BcryptPasswordHasher
 from talk_to_pdf.backend.app.core import get_uow
 from talk_to_pdf.backend.app.core.security import decode_access_token
 from talk_to_pdf.backend.app.domain.users import UserNotFoundError
-from talk_to_pdf.backend.app.infrastructure.db import UnitOfWork
+from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
 from talk_to_pdf.backend.app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -28,20 +28,20 @@ async def get_register_user_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)],
         hasher: Annotated[BcryptPasswordHasher, Depends(get_password_hasher)]
 ) -> RegisterUserUseCase:
-    return RegisterUserUseCase(uow.user_repo, hasher)
+    return RegisterUserUseCase(uow, hasher)
 
 
 async def get_login_user_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)],
         hasher: Annotated[BcryptPasswordHasher, Depends(get_password_hasher)]
 ) -> LoginUserUseCase:
-    return LoginUserUseCase(uow.user_repo, hasher)
+    return LoginUserUseCase(uow, hasher)
 
 
 async def get_current_user_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)]
 ) -> GetCurrentUserUseCase:
-    return GetCurrentUserUseCase(uow.user_repo)
+    return GetCurrentUserUseCase(uow)
 
 DEV_USER = CurrentUserDTO(id=uuid.uuid4(), email="dev@example.com", name="Dev", is_active=True)
 

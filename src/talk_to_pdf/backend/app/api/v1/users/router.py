@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from starlette import status
 from talk_to_pdf.backend.app.api.v1.users import UserResponse, RegisterUserRequest, TokenResponse, LoginRequest
 from talk_to_pdf.backend.app.api.v1.users.deps import get_register_user_use_case, get_login_user_use_case, \
@@ -10,9 +10,6 @@ from talk_to_pdf.backend.app.api.v1.users.mappers import request_to_input_dto, o
 from talk_to_pdf.backend.app.application.users import RegisterUserOutput, CurrentUserDTO
 from talk_to_pdf.backend.app.application.users.use_cases import RegisterUserUseCase, LoginUserUseCase
 from talk_to_pdf.backend.app.core.security import create_access_token
-from talk_to_pdf.backend.app.domain.users import RegistrationError
-from talk_to_pdf.backend.app.domain.users.erorrs import InvalidCredentialsError, InactiveUserError
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 register_user_dep=Annotated[RegisterUserUseCase, Depends(get_register_user_use_case)]
@@ -29,16 +26,8 @@ async def register_user(
     body: RegisterUserRequest,
     use_case: register_user_dep
 ) -> UserResponse:
-
-
-    try:
-        input_dto=request_to_input_dto(body)
-        result: RegisterUserOutput = await use_case.execute(input_dto)
-    except RegistrationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
+    input_dto = request_to_input_dto(body)
+    result: RegisterUserOutput = await use_case.execute(input_dto)
     output_response=output_dto_to_response(result)
     return output_response
 
@@ -50,20 +39,7 @@ async def login(
     use_case: login_user_dep
 ) -> TokenResponse:
     input_dto = login_request_to_input_dto(payload)
-
-    try:
-        result = await use_case.execute(input_dto)
-    except InvalidCredentialsError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
-        )
-    except InactiveUserError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user",
-        )
-
+    result = await use_case.execute(input_dto)
     access_token = create_access_token(subject=str(result.id))
     return TokenResponse(access_token=access_token)
 

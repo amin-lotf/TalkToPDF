@@ -9,3 +9,5 @@ engine = create_async_engine(
     pool_pre_ping=True,
     future=True,
 )
+
+# sync_engine = engine.sync_engine

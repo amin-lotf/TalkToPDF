@@ -1,8 +1,8 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 from talk_to_pdf.backend.app.domain.files import StoredFileInfo
 
-
+@runtime_checkable
 class FileStorage(Protocol):
     async def save(
         self,
