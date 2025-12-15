@@ -10,7 +10,7 @@ class GetProjectUseCase:
 
     async def execute(self, dto: GetProjectInputDTO) -> ProjectDTO:
         async with self._uow:
-            project = await self._uow.project_repo.get_by_id(
+            project = await self._uow.project_repo.get_by_owner_and_id(
                 owner_id=dto.owner_id,
                 project_id=dto.project_id
             )

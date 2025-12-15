@@ -23,12 +23,14 @@ class GetProjectInputDTO:
 
 @dataclass(frozen=True)
 class RenameProjectInputDTO:
+    owner_id: UUID
     project_id: UUID
     new_name: str
 
 
 @dataclass(frozen=True)
 class DeleteProjectInputDTO:
+    owner_id: UUID
     project_id: UUID
 
 

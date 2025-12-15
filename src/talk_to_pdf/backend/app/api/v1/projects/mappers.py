@@ -3,7 +3,7 @@ from fastapi import UploadFile
 
 from talk_to_pdf.backend.app.api.v1.projects.schemas import ListProjectsResponse, ProjectResponse
 from talk_to_pdf.backend.app.application.projects.dto import CreateProjectInputDTO, GetProjectInputDTO, \
-    ListProjectsInputDTO, ProjectDTO
+    ListProjectsInputDTO, ProjectDTO, DeleteProjectInputDTO, RenameProjectInputDTO
 
 
 def get_create_project_input_dto(
@@ -39,3 +39,10 @@ def get_list_projects_input_dto(
 def projects_dts_to_schema(projects_dto:list[ProjectDTO])->ListProjectsResponse:
     items = [ProjectResponse.model_validate(p) for p in projects_dto]
     return ListProjectsResponse(items=items)
+
+
+def get_delete_project_input_dto(owner_id: UUID, project_id: UUID) -> DeleteProjectInputDTO:
+    return DeleteProjectInputDTO(owner_id=owner_id, project_id=project_id)
+
+def get_rename_project_input_dto(owner_id: UUID, project_id: UUID, new_name: str) -> RenameProjectInputDTO:
+    return RenameProjectInputDTO(owner_id=owner_id, project_id=project_id, new_name=new_name)

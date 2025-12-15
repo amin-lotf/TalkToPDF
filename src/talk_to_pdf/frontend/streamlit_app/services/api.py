@@ -197,3 +197,28 @@ class Api:
         )
         resp.raise_for_status()
         return resp.json()
+
+    @handle_httpx_errors
+    def delete_project(self, access_token: Optional[str], project_id: str) -> None:
+        resp = self._client.delete(
+            f"/projects/{project_id}",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return None
+
+    @handle_httpx_errors
+    def rename_project(
+            self,
+            access_token: Optional[str],
+            project_id: str,
+            *,
+            name: str,
+    ) -> Dict[str, Any]:
+        resp = self._client.patch(
+            f"/projects/{project_id}/rename",
+            headers=self._auth_headers(access_token) or None,
+            json={"new_name": name},
+        )
+        resp.raise_for_status()
+        return resp.json()

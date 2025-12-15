@@ -2,7 +2,8 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from talk_to_pdf.backend.app.application.projects.use_cases import CreateProjectUseCase, ListUserProjectsUseCase
+from talk_to_pdf.backend.app.application.projects.use_cases import CreateProjectUseCase, ListUserProjectsUseCase, \
+    DeleteProjectUseCase, RenameProjectUseCase
 from talk_to_pdf.backend.app.application.projects.use_cases.get_project import GetProjectUseCase
 from talk_to_pdf.backend.app.core import get_uow
 from talk_to_pdf.backend.app.core.deps import get_file_storage
@@ -25,3 +26,14 @@ async def get_list_user_projects_use_case(
         uow: Annotated[UnitOfWork, Depends(get_uow)],
 )->ListUserProjectsUseCase:
     return ListUserProjectsUseCase(uow)
+
+
+async def get_delete_project_use_case(
+        uow: Annotated[UnitOfWork, Depends(get_uow)],
+)->DeleteProjectUseCase:
+    return DeleteProjectUseCase(uow)
+
+async def get_rename_project_use_case(
+        uow: Annotated[UnitOfWork, Depends(get_uow)],
+)->RenameProjectUseCase:
+    return RenameProjectUseCase(uow)

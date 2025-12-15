@@ -6,23 +6,27 @@ from talk_to_pdf.backend.app.application.projects.dto import (
 from talk_to_pdf.backend.app.application.projects.mappers import (
     project_domain_to_output_dto,
 )
-from talk_to_pdf.backend.app.domain.projects import ProjectRepository
-from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound
+from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToRenameProject
 from talk_to_pdf.backend.app.domain.projects.value_objects import  ProjectName
+from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
 
 
 class RenameProjectUseCase:
-    def __init__(
-        self,
-        project_repo: ProjectRepository,
-    ) -> None:
-        self._project_repo: ProjectRepository = project_repo
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
 
     async def execute(self, dto: RenameProjectInputDTO) -> ProjectDTO:
-        project_id = dto.project_id
-        project = await self._project_repo.get_by_id(project_id)
-        if project is None:
-            raise ProjectNotFound("Project not found.")
-        project.rename(ProjectName(dto.new_name))
-        saved = await self._project_repo.add(project)
-        return project_domain_to_output_dto(saved)
+        async with self._uow:
+            project = await self._uow.project_repo.get_by_owner_and_id(
+                owner_id=dto.owner_id,
+                project_id=dto.project_id
+            )
+            if not project:
+                raise ProjectNotFound(project_id=str(dto.project_id))
+            project.rename(ProjectName(dto.new_name))
+            try:
+                saved = await self._uow.project_repo.rename(project=project)
+            except Exception:
+                raise FailedToRenameProject()
+
+            return project_domain_to_output_dto(saved)

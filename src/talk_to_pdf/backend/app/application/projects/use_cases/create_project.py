@@ -46,6 +46,6 @@ class CreateProjectUseCase:
                     await self._file_storage.delete(stored.storage_path)
                 except Exception:
                     pass
-                raise FailedToCreateProject(str(project.name))
+                raise FailedToCreateProject(project.name.value)
 
             return project_domain_to_output_dto(saved)

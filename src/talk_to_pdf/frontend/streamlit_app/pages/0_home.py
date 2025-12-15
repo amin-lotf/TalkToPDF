@@ -77,10 +77,52 @@ def _sidebar_projects() -> None:
         if not pid:
             continue
 
-        label = f"📄 {p.get('name', 'Untitled')}"
-        if st.sidebar.button(label, use_container_width=True, key=f"open_{pid}"):
-            st.session_state["selected_project_id"] = pid
-            st.switch_page("pages/3_project.py")
+        name = p.get("name", "Untitled")
+
+        row = st.sidebar.columns([8, 1], gap="small")
+
+        with row[0]:
+            if st.button(f"📄 {name}", use_container_width=True, key=f"open_{pid}"):
+                st.session_state["selected_project_id"] = pid
+                st.switch_page("pages/3_project.py")
+
+        with row[1]:
+            with st.popover("⋯", use_container_width=True):
+                st.caption(name)
+
+                # Rename
+                with st.form(f"rename_form_{pid}", clear_on_submit=True):
+                    new_name = st.text_input("New name", value=name)
+                    rename_submit = st.form_submit_button("Rename", use_container_width=True)
+
+                if rename_submit:
+                    if not new_name.strip():
+                        st.error("Name is required.")
+                    else:
+                        try:
+                            api.rename_project(token, pid, name=new_name.strip())
+                            st.success("Renamed.")
+                            st.rerun()
+                        except ApiError as e:
+                            st.error(str(e))
+
+                st.divider()
+
+                # Delete (confirm)
+                st.warning("Delete is permanent.")
+                confirm = st.checkbox("I understand", key=f"del_confirm_{pid}")
+                if st.button("Delete", use_container_width=True, key=f"delete_{pid}", disabled=not confirm):
+                    try:
+                        api.delete_project(token, pid)
+
+                        # if user deleted the currently opened/selected project, clear selection
+                        if st.session_state.get("selected_project_id") == pid:
+                            st.session_state.pop("selected_project_id", None)
+
+                        st.success("Deleted.")
+                        st.rerun()
+                    except ApiError as e:
+                        st.error(str(e))
 
 
 _sidebar_projects()

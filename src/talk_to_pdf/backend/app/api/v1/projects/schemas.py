@@ -29,7 +29,7 @@ class ProjectResponse(BaseModel):
 
 
 class RenameProjectRequest(BaseModel):
-    new_name: str = Field(min_length=2, max_length=100)
+    new_name: str = Field(min_length=1, max_length=100)
 
 
 class ListProjectsResponse(BaseModel):

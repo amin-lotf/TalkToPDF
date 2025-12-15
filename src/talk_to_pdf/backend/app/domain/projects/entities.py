@@ -30,14 +30,8 @@ class Project:
     created_at: datetime = field(default_factory=utcnow)
 
 
-    def rename(self, new_name: ProjectName) -> Project:
-        return Project(
-            id=self.id,
-            name=new_name,
-            owner_id=self.owner_id,
-            primary_document=self.primary_document,
-            created_at=self.created_at
-        )
+    def rename(self, new_name: ProjectName) -> None:
+       self.name = new_name
 
     def attach_main_document(self, document: ProjectDocument) -> Project:
         return Project(
