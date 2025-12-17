@@ -1,7 +1,7 @@
 from talk_to_pdf.backend.app.application.projects.dto import GetProjectInputDTO, ProjectDTO
 from talk_to_pdf.backend.app.application.projects.mappers import project_domain_to_output_dto
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class GetProjectUseCase:

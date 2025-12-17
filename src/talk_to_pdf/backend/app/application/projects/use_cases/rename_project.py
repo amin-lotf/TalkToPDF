@@ -8,7 +8,7 @@ from talk_to_pdf.backend.app.application.projects.mappers import (
 )
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToRenameProject
 from talk_to_pdf.backend.app.domain.projects.value_objects import  ProjectName
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class RenameProjectUseCase:

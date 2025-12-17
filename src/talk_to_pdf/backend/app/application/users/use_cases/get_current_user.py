@@ -3,7 +3,7 @@ from uuid import UUID
 from talk_to_pdf.backend.app.application.users import CurrentUserDTO
 from talk_to_pdf.backend.app.application.users.mappers import current_domain_to_output_dto
 from talk_to_pdf.backend.app.domain.users import UserNotFoundError
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class GetCurrentUserUseCase:

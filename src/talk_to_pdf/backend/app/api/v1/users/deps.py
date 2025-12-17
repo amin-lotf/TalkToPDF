@@ -11,7 +11,7 @@ from talk_to_pdf.backend.app.core import BcryptPasswordHasher
 from talk_to_pdf.backend.app.core import get_uow
 from talk_to_pdf.backend.app.core.security import decode_access_token
 from talk_to_pdf.backend.app.domain.users import UserNotFoundError
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(

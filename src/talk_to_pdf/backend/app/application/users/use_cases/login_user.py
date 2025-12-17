@@ -3,7 +3,7 @@ from talk_to_pdf.backend.app.application.users import LoginUserInputDTO, LoginUs
 from talk_to_pdf.backend.app.application.users.mappers import login_domain_to_output_dto
 from talk_to_pdf.backend.app.application.users.use_cases.protocols import PasswordHasher
 from talk_to_pdf.backend.app.domain.users.erorrs import InvalidCredentialsError, InactiveUserError
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class LoginUserUseCase:

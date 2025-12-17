@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from talk_to_pdf.backend.app.core import settings
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork, SqlAlchemyUnitOfWork
+from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
 
 

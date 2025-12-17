@@ -4,7 +4,7 @@ from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.projects import ProjectRepository
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToDeleteProject, \
     FailedToDeleteProjectDocument
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class DeleteProjectUseCase:

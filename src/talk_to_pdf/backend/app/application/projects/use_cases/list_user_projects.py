@@ -12,7 +12,7 @@ from talk_to_pdf.backend.app.application.projects.mappers import (
 )
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.projects import ProjectRepository
-from talk_to_pdf.backend.app.infrastructure.db.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 
 
 class ListUserProjectsUseCase:
