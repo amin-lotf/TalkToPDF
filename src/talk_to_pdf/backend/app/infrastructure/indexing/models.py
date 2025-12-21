@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
+from sqlalchemy import Enum as SAEnum, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from talk_to_pdf.backend.app.domain.common import utcnow
+from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
+from talk_to_pdf.backend.app.infrastructure.db.base import Base
+
+
+
+
+class DocumentIndexModel(Base):
+    __tablename__ = "document_indexes"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+
+    project_id: Mapped[UUID] = mapped_column(nullable=False, index=True)
+    document_id: Mapped[UUID] = mapped_column(nullable=False, index=True)
+
+    status: Mapped[IndexStatus] = mapped_column(
+        SAEnum(
+            IndexStatus,
+            name="index_status_enum",
+            native_enum=True,  # PostgreSQL ENUM
+            create_constraint=True,
+        ),
+        nullable=False,
+        index=True,
+    )
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    message: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # optional but recommended for reproducibility / re-indexing later
+    chunker_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    embed_config: Mapped[dict ] = mapped_column(JSONB, nullable=False)
+    embed_signature: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+    chunks: Mapped[list["ChunkModel"]] = relationship(
+        back_populates="index",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class ChunkModel(Base):
+    __tablename__ = "chunks"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+
+    index_id: Mapped[UUID] = mapped_column(
+        ForeignKey("document_indexes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    index: Mapped["DocumentIndexModel"] = relationship(back_populates="chunks")
+    __table_args__ = (
+        UniqueConstraint("index_id", "chunk_index", name="uq_chunks_index_chunk_index"),
+    )

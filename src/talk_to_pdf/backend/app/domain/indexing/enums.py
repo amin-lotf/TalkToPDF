@@ -17,3 +17,7 @@ class IndexStatus(StrEnum):
     @property
     def is_active(self) -> bool:
         return self in {IndexStatus.PENDING, IndexStatus.RUNNING}
+
+    @classmethod
+    def active(cls) -> tuple["IndexStatus", ...]:
+        return cls.PENDING, cls.RUNNING

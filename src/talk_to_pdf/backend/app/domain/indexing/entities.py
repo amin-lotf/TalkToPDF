@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
-
+from .value_objects import EmbedConfig
 from .enums import IndexStatus
 from ..common import utcnow
 
@@ -17,6 +17,8 @@ class DocumentIndex:
     """
     project_id: UUID
     document_id: UUID
+    chunker_version: str
+    embed_config: EmbedConfig
     message: Optional[str] = None
     error: Optional[str] = None
     progress: int = 0
@@ -36,3 +38,7 @@ class DocumentIndex:
     @property
     def is_active(self) -> bool:
         return self.status.is_active
+
+    @property
+    def embed_signature(self) -> str:
+        return self.embed_config.signature()

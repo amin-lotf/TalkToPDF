@@ -7,7 +7,6 @@ from sqlalchemy import delete as sa_delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.projects import Project
-from talk_to_pdf.backend.app.domain.projects.repositories import ProjectRepository
 from talk_to_pdf.backend.app.infrastructure.projects.mappers import (
     create_project_domain_from_models,
     project_domain_to_model,
@@ -16,7 +15,7 @@ from talk_to_pdf.backend.app.infrastructure.projects.mappers import (
 from talk_to_pdf.backend.app.infrastructure.projects.models import ProjectModel, ProjectDocumentModel
 
 
-class SqlAlchemyProjectRepository(ProjectRepository):
+class SqlAlchemyProjectRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

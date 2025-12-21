@@ -9,14 +9,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.users import User, RegistrationError
-from talk_to_pdf.backend.app.domain.users.repositories import UserRepository
 from talk_to_pdf.backend.app.infrastructure.users.mappers import user_model_to_domain, user_domain_to_model
 from talk_to_pdf.backend.app.infrastructure.users.models import UserModel
 
 
 
 
-class SqlAlchemyUserRepository(UserRepository):
+class SqlAlchemyUserRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
