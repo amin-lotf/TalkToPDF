@@ -1,6 +1,6 @@
 from talk_to_pdf.backend.app.domain.projects import Project, ProjectName
 from talk_to_pdf.backend.app.domain.projects.entities import ProjectDocument
-from talk_to_pdf.backend.app.infrastructure.projects.models import ProjectModel, ProjectDocumentModel
+from talk_to_pdf.backend.app.infrastructure.db.models.project import ProjectModel, ProjectDocumentModel
 
 
 def project_document_model_to_domain(m: ProjectDocumentModel) -> ProjectDocument:

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft
 
 
 class DocumentIndexRepository(Protocol):
@@ -53,6 +53,6 @@ class DocumentIndexRepository(Protocol):
 
 
 class ChunkRepository(Protocol):
-    async def bulk_create(self, *, index_id: UUID, chunks: list[tuple[int, str, dict | None]]) -> None: ...
+    async def bulk_create(self, *, index_id: UUID, chunks: list[ChunkDraft]) -> None: ...
     async def list_chunk_ids(self, *, index_id: UUID) -> list[UUID]: ...
     async def delete_by_index(self, *, index_id: UUID) -> None: ...

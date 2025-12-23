@@ -5,7 +5,7 @@ from talk_to_pdf.backend.app.application.users.mappers import (
     register_domain_to_output_dto,
     register_input_dto_to_domain,
 )
-from talk_to_pdf.backend.app.application.users.use_cases.protocols import PasswordHasher
+from talk_to_pdf.backend.app.application.users.interfaces import PasswordHasher
 from talk_to_pdf.backend.app.domain.users import RegistrationError
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 

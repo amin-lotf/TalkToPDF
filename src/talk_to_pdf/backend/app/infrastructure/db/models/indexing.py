@@ -6,6 +6,7 @@ from sqlalchemy import Enum as SAEnum, UniqueConstraint
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector as PGVector
 
 from talk_to_pdf.backend.app.domain.common import utcnow
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
@@ -43,7 +44,7 @@ class DocumentIndexModel(Base):
     chunker_version: Mapped[str] = mapped_column(String(64), nullable=False)
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     embed_config: Mapped[dict ] = mapped_column(JSONB, nullable=False)
-    embed_signature: Mapped[str] = mapped_column(String(255), nullable=False)
+    embed_signature: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
 
@@ -72,4 +73,30 @@ class ChunkModel(Base):
     index: Mapped["DocumentIndexModel"] = relationship(back_populates="chunks")
     __table_args__ = (
         UniqueConstraint("index_id", "chunk_index", name="uq_chunks_index_chunk_index"),
+    )
+
+
+class ChunkEmbeddingModel(Base):
+    __tablename__ = "chunk_embeddings"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+
+    index_id: Mapped[UUID] = mapped_column(
+        ForeignKey("document_indexes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    chunk_id: Mapped[UUID] = mapped_column(
+        ForeignKey("chunks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # optional but helpful for debugging + quick ordering
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    # pgvector column
+    embedding: Mapped[list[float]] = mapped_column(PGVector(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("index_id", "chunk_id", name="uq_chunk_embeddings_index_chunk"),
     )

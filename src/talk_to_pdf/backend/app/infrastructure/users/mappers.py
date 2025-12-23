@@ -1,7 +1,5 @@
-from uuid import UUID
-
 from talk_to_pdf.backend.app.domain.users import User, UserEmail
-from talk_to_pdf.backend.app.infrastructure.users.models import UserModel
+from talk_to_pdf.backend.app.infrastructure.db.models.user import UserModel
 
 
 def user_model_to_domain(model: UserModel) -> User:

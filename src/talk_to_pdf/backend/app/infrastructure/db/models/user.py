@@ -1,4 +1,4 @@
-# talk_to_pdf/backend/app/infrastructure/auth/models.py
+# talk_to_pdf/backend/app/infrastructure/auth/user.py
 from __future__ import annotations
 
 from datetime import datetime

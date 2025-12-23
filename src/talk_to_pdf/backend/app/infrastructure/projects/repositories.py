@@ -12,7 +12,7 @@ from talk_to_pdf.backend.app.infrastructure.projects.mappers import (
     project_domain_to_model,
     project_document_domain_to_model,
 )
-from talk_to_pdf.backend.app.infrastructure.projects.models import ProjectModel, ProjectDocumentModel
+from talk_to_pdf.backend.app.infrastructure.db.models.project import ProjectModel, ProjectDocumentModel
 
 
 class SqlAlchemyProjectRepository:

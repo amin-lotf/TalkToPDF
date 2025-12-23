@@ -1,14 +1,13 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 from uuid import UUID
 from langchain_openai import OpenAIEmbeddings
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, Vector
 from talk_to_pdf.backend.app.infrastructure.indexing.embedders.langchain_openai_embedder import LangChainEmbedder
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
-from talk_to_pdf.backend.app.infrastructure.indexing.models import ChunkModel
 from talk_to_pdf.backend.app.core import settings
 
 
@@ -24,7 +23,7 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
 
 
 # ---------- Chunking (minimal, deterministic) ----------
-def chunk_text(text: str, *, max_chars: int = 1200, overlap: int = 150) -> List[Tuple[str, dict]]:
+def chunk_text(text: str, *, max_chars: int = 1200, overlap: int = 150) -> List[ChunkDraft]:
     """
     Very simple character-based chunking (good enough for v1).
     Returns list of (chunk_text, meta).
@@ -33,17 +32,17 @@ def chunk_text(text: str, *, max_chars: int = 1200, overlap: int = 150) -> List[
     if not text:
         return []
 
-    chunks: List[Tuple[str, dict]] = []
+    chunks: List[ChunkDraft] = []
     start = 0
     n = len(text)
-
     chunk_idx = 0
     while start < n:
         end = min(start + max_chars, n)
         chunk = text[start:end].strip()
         if chunk:
             meta = {"char_start": start, "char_end": end, "chunk_index": chunk_idx}
-            chunks.append((chunk, meta))
+            draft=ChunkDraft(chunk_index=chunk_idx, text=chunk, meta=meta)
+            chunks.append(draft)
             chunk_idx += 1
 
         if end >= n:
@@ -139,7 +138,7 @@ async def run_indexing(*, index_id: UUID) -> None:
 
     # 3) Chunk
     chunks = chunk_text(text, max_chars=1200, overlap=150)
-    texts = [c[0] for c in chunks]
+    texts = [c.text for c in chunks]
 
     async with SessionLocal() as session:
         uow = SqlAlchemyUnitOfWork(session)
@@ -160,16 +159,8 @@ async def run_indexing(*, index_id: UUID) -> None:
                 progress=20,
                 message=f"Chunking ({len(chunks)} chunks)",
             )
+            await uow.chunk_repo.bulk_create(index_id=index_id, chunks=chunks)
 
-            for chunk_text_value, meta in chunks:
-                session.add(
-                    ChunkModel(
-                        index_id=index_id,
-                        chunk_index=int(meta["chunk_index"]),
-                        text=chunk_text_value,
-                        meta=meta,
-                    )
-                )
 
 
     # 4) Embed (batched)
@@ -180,20 +171,17 @@ async def run_indexing(*, index_id: UUID) -> None:
     )
     embedder = LangChainEmbedder(embeddings)
 
-    vectors: list[list[float]] = []
+    vectors: list[Vector] = []
     try:
         batches = _batched(texts, embed_cfg.batch_size)
         total = len(texts)
         done = 0
-
         # progress range for embedding, e.g. 35 -> 85
         start_p, end_p = 35, 85
-
-        for bi, batch in enumerate(batches):
-            # cancellation check between batches
-            async with SessionLocal() as session:
-                uow = SqlAlchemyUnitOfWork(session)
-                async with uow:
+        async with SessionLocal() as session:
+            uow = SqlAlchemyUnitOfWork(session)
+            async with uow:
+                for bi, batch in enumerate(batches):
                     if await uow.index_repo.is_cancel_requested(index_id=index_id):
                         await uow.index_repo.delete_index_artifacts(index_id=index_id)
                         await uow.index_repo.update_progress(
@@ -213,10 +201,12 @@ async def run_indexing(*, index_id: UUID) -> None:
                         message=f"Embedding batch {bi+1}/{len(batches)}",
                         meta={"embedder": embed_cfg.model, "batch_size": embed_cfg.batch_size, "done": done, "total": total},
                     )
+                    await session.commit()  # <-- important
+                    raw_batch_vectors = await embedder.aembed_documents(batch)
 
-            batch_vectors = await embedder.aembed_documents(batch)
-            vectors.extend(batch_vectors)
-            done += len(batch)
+                    batch_vectors = [Vector.from_list(v) for v in raw_batch_vectors]
+                    vectors.extend(batch_vectors)
+                    done += len(batch)
 
     except Exception as e:
         async with SessionLocal() as session:

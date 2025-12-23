@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
-from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_to_domain, create_document_index_model
-from talk_to_pdf.backend.app.infrastructure.indexing.models import ChunkModel, DocumentIndexModel
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft
+from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_to_domain, create_document_index_model, \
+    create_chunk_models
+from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel
 
 
 
@@ -104,3 +105,56 @@ class SqlAlchemyDocumentIndexRepository:
 class SqlAlchemyChunkRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def bulk_create(
+        self,
+        *,
+        index_id: UUID,
+        chunks: list[ChunkDraft],
+    ) -> None:
+        """
+        Insert many chunks for the given index_id.
+
+        chunks format: [(chunk_index, text, meta), ...]
+        """
+        if not chunks:
+            return
+
+        # Build ORM objects
+        models=create_chunk_models(index_id,chunks)
+        self._session.add_all(models)
+        # Flush so they are inserted and IDs are generated (still uncommitted)
+        await self._session.flush()
+
+    async def list_chunk_ids(self, *, index_id: UUID) -> list[UUID]:
+        """
+        Return chunk IDs ordered by chunk_index, so caller can align vectors to chunks.
+        """
+        stmt = (
+            select(ChunkModel.id)
+            .where(ChunkModel.index_id == index_id)
+            .order_by(ChunkModel.chunk_index.asc())
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return list(rows)
+
+    async def list_chunks_for_index(self, *, index_id: UUID) -> list[ChunkModel]:
+        """
+        Optional convenience method: get full chunk rows ordered by chunk_index.
+        Useful for debugging / retrieval pipelines.
+        """
+        stmt = (
+            select(ChunkModel)
+            .where(ChunkModel.index_id == index_id)
+            .order_by(ChunkModel.chunk_index.asc())
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def delete_by_index(self, *, index_id: UUID) -> None:
+        """
+        Delete all chunks for a given index_id.
+        Note: ON DELETE CASCADE also handles deletes when index is deleted,
+        but this is useful for "cancel requested" cleanup.
+        """
+        stmt = delete(ChunkModel).where(ChunkModel.index_id == index_id)
+        await self._session.execute(stmt)

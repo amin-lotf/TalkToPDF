@@ -1,6 +1,7 @@
 import hashlib
 import json
 from dataclasses import dataclass
+from typing import Any, Sequence
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,3 +44,23 @@ class EmbedConfig:
 
     def signature(self) -> str:
         return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
+
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkDraft:
+    chunk_index: int
+    text: str
+    meta: dict[str, Any] | None = None
+
+
+
+@dataclass(frozen=True, slots=True)
+class Vector:
+    values: tuple[float, ...]
+    dim: int
+
+    @classmethod
+    def from_list(cls, values: Sequence[float]) -> "Vector":
+        values = tuple(float(v) for v in values)
+        return cls(values=values, dim=len(values))

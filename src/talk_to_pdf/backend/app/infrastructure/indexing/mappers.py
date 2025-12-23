@@ -4,8 +4,8 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
-from talk_to_pdf.backend.app.infrastructure.indexing.models import DocumentIndexModel
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft
+from talk_to_pdf.backend.app.infrastructure.db.models.indexing import DocumentIndexModel, ChunkModel
 
 
 def index_model_to_domain(m: DocumentIndexModel) -> DocumentIndex:
@@ -42,3 +42,15 @@ def create_document_index_model(
         embed_signature=embed_config.signature(),
         meta=None,
     )
+
+def create_chunk_models(index_id:UUID,chunks:list[ChunkDraft])->list[ChunkModel]:
+    models = [
+        ChunkModel(
+            index_id=index_id,
+            chunk_index=c.chunk_index,
+            text=c.text,
+            meta=c.meta,
+        )
+        for c in chunks
+    ]
+    return models

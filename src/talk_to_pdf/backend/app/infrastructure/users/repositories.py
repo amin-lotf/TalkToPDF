@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.users import User, RegistrationError
 from talk_to_pdf.backend.app.infrastructure.users.mappers import user_model_to_domain, user_domain_to_model
-from talk_to_pdf.backend.app.infrastructure.users.models import UserModel
+from talk_to_pdf.backend.app.infrastructure.db.models.user import UserModel
 
 
 

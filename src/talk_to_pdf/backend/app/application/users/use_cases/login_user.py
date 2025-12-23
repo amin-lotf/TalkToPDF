@@ -1,7 +1,7 @@
 from __future__ import annotations
 from talk_to_pdf.backend.app.application.users import LoginUserInputDTO, LoginUserOutputDTO
 from talk_to_pdf.backend.app.application.users.mappers import login_domain_to_output_dto
-from talk_to_pdf.backend.app.application.users.use_cases.protocols import PasswordHasher
+from talk_to_pdf.backend.app.application.users.interfaces import PasswordHasher
 from talk_to_pdf.backend.app.domain.users.erorrs import InvalidCredentialsError, InactiveUserError
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 

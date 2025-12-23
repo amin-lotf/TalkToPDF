@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from talk_to_pdf.backend.app.application.indexing.dto import IndexStatusDTO, StartIndexingInputDTO
-from talk_to_pdf.backend.app.application.indexing.interface import IndexingRunner
+from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.application.indexing.mappers import to_index_status_dto
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing
