@@ -5,7 +5,7 @@ from tests.unit.fakes.uow import FakeUnitOfWork
 
 
 @pytest.fixture
-def uow() -> FakeUnitOfWork:
+def uow(tmp_path) -> FakeUnitOfWork:
     return FakeUnitOfWork()
 
 

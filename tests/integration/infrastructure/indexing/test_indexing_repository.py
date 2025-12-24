@@ -5,13 +5,12 @@ from datetime import timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import  func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.infrastructure.db.models import DocumentIndexModel, ChunkModel
-from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.infrastructure.indexing.repositories import SqlAlchemyDocumentIndexRepository
 
 pytestmark = pytest.mark.asyncio

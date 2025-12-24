@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from tests.unit.fakes.chunk_repo import FakeChunkRepository
+from tests.unit.fakes.indexing_repos import  FakeDocumentIndexRepository
+from tests.unit.fakes.project_repo import FakeProjectRepository
 from tests.unit.fakes.user_repo import FakeUserRepository
 
 
@@ -8,9 +11,9 @@ class FakeUnitOfWork:
         self.user_repo = FakeUserRepository()
 
         # Keep placeholders if your UnitOfWork Protocol expects these attributes
-        self.project_repo = None
-        self.index_repo = None
-        self.chunk_repo = None
+        self.project_repo = FakeProjectRepository()
+        self.index_repo = FakeDocumentIndexRepository()
+        self.chunk_repo = FakeChunkRepository()
 
         self.committed = False
         self.rolled_back = False
