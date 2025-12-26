@@ -13,6 +13,7 @@ def index_model_to_domain(m: DocumentIndexModel) -> DocumentIndex:
         id=m.id,
         project_id=m.project_id,
         document_id=m.document_id,
+        storage_path=m.storage_path,
         chunker_version=m.chunker_version,
         embed_config=EmbedConfig.from_dict(m.embed_config),
         status=m.status,
@@ -24,14 +25,16 @@ def index_model_to_domain(m: DocumentIndexModel) -> DocumentIndex:
     )
 
 
-def create_document_index_model(
+def create_document_index_model(*,
         project_id: UUID,
         document_id: UUID,
+        storage_path:str,
         chunker_version: str,
         embed_config:EmbedConfig) -> DocumentIndexModel:
     return DocumentIndexModel(
         project_id=project_id,
         document_id=document_id,
+        storage_path=storage_path,
         status=IndexStatus.PENDING,
         progress=0,
         message="Queued",

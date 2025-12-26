@@ -13,22 +13,26 @@ from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel
 
 
-
-
-
 class SqlAlchemyDocumentIndexRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def create_pending(
-        self,
-        *,
-        project_id: UUID,
-        document_id: UUID,
-        chunker_version: str,
-        embed_config: EmbedConfig,
+            self,
+            *,
+            project_id: UUID,
+            document_id: UUID,
+            storage_path: str,
+            chunker_version: str,
+            embed_config: EmbedConfig,
     ) -> DocumentIndex:
-        m = create_document_index_model(project_id, document_id, chunker_version, embed_config)
+        m = create_document_index_model(
+            project_id=project_id,
+            document_id=document_id,
+            storage_path=storage_path,
+            chunker_version=chunker_version,
+            embed_config=embed_config
+        )
         self._session.add(m)
         await self._session.flush()  # ensures m.id is available before commit
         return index_model_to_domain(m)
@@ -43,7 +47,8 @@ class SqlAlchemyDocumentIndexRepository:
         m = (await self._session.execute(stmt)).scalar_one_or_none()
         return index_model_to_domain(m) if m else None
 
-    async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,embed_signature: str) -> DocumentIndex | None:
+    async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,
+                                                         embed_signature: str) -> DocumentIndex | None:
         stmt = (
             select(DocumentIndexModel)
             .where(DocumentIndexModel.project_id == project_id)
@@ -61,14 +66,14 @@ class SqlAlchemyDocumentIndexRepository:
         return index_model_to_domain(m) if m else None
 
     async def update_progress(
-        self,
-        *,
-        index_id: UUID,
-        status: IndexStatus,
-        progress: int,
-        message: str | None = None,
-        error: str | None = None,
-        meta: dict | None = None,
+            self,
+            *,
+            index_id: UUID,
+            status: IndexStatus,
+            progress: int,
+            message: str | None = None,
+            error: str | None = None,
+            meta: dict | None = None,
     ) -> None:
         stmt = (
             update(DocumentIndexModel)
@@ -101,16 +106,15 @@ class SqlAlchemyDocumentIndexRepository:
         await self._session.execute(delete(ChunkModel).where(ChunkModel.index_id == index_id))
 
 
-
 class SqlAlchemyChunkRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def bulk_create(
-        self,
-        *,
-        index_id: UUID,
-        chunks: list[ChunkDraft],
+            self,
+            *,
+            index_id: UUID,
+            chunks: list[ChunkDraft],
     ) -> None:
         """
         Insert many chunks for the given index_id.
@@ -121,7 +125,7 @@ class SqlAlchemyChunkRepository:
             return
 
         # Build ORM objects
-        models=create_chunk_models(index_id,chunks)
+        models = create_chunk_models(index_id, chunks)
         self._session.add_all(models)
         # Flush so they are inserted and IDs are generated (still uncommitted)
         await self._session.flush()

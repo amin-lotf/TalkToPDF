@@ -13,7 +13,7 @@ class FilesystemFileStorage:
 
     async def save(
         self,
-        *,
+            *,
         owner_id: UUID,
         project_id: UUID,
         filename: str,
@@ -45,8 +45,18 @@ class FilesystemFileStorage:
             content_type=content_type,
         )
 
-    async def delete(self, path: str) -> None:
-        full_path = self._base_dir / path
+    async def read_bytes(self, *, storage_path: str) -> bytes:
+        full_path = (self._base_dir / storage_path).resolve()
+
+        # Safety: prevent path traversal
+        if not str(full_path).startswith(str(self._base_dir.resolve())):
+            raise ValueError("Invalid storage path")
+
+        return full_path.read_bytes()
+
+
+    async def delete(self, *,storage_path: str) -> None:
+        full_path = self._base_dir / storage_path
         if full_path.exists():
             full_path.unlink()
             full_path.parent.rmdir()

@@ -14,6 +14,7 @@ class DocumentIndexRepository(Protocol):
             *,
             project_id: UUID,
             document_id: UUID,
+            storage_path: str,
             chunker_version: str,
             embed_config: EmbedConfig
     ) -> DocumentIndex:

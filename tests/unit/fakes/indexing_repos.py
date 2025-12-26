@@ -21,12 +21,14 @@ class FakeDocumentIndexRepository:
         *,
         project_id: UUID,
         document_id: UUID,
+        storage_path: str,
         chunker_version: str,
         embed_config: EmbedConfig,
     ) -> DocumentIndex:
         idx = DocumentIndex(
             project_id=project_id,
             document_id=document_id,
+            storage_path=storage_path,
             chunker_version=chunker_version,
             embed_config=embed_config,
             status=IndexStatus.PENDING,
@@ -79,6 +81,7 @@ class FakeDocumentIndexRepository:
         self._by_id[index_id] = DocumentIndex(
             project_id=idx.project_id,
             document_id=idx.document_id,
+            storage_path=idx.storage_path,
             chunker_version=idx.chunker_version,
             embed_config=idx.embed_config,
             status=status,

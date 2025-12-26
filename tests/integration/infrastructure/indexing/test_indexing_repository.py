@@ -56,6 +56,7 @@ async def test_create_pending_flushes_id_and_persists_fields(
     idx = await repo.create_pending(
         project_id=project_id,
         document_id=document_id,
+        storage_path="/fake/path/doc.pdf",
         chunker_version="v1",
         embed_config=embed_config,
     )
@@ -88,10 +89,10 @@ async def test_get_latest_by_project_returns_most_recent(
     project_id = uuid4()
 
     older = await repo.create_pending(
-        project_id=project_id, document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=project_id, document_id=uuid4(), storage_path="/fake/path/older.pdf", chunker_version="v1", embed_config=embed_config
     )
     newer = await repo.create_pending(
-        project_id=project_id, document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=project_id, document_id=uuid4(), storage_path="/fake/path/newer.pdf", chunker_version="v1", embed_config=embed_config
     )
 
     # Make ordering deterministic.
@@ -113,16 +114,16 @@ async def test_get_latest_active_by_project_and_signature_filters_by_signature_a
 
     # Same project, same signature, but different statuses and created_at.
     a1 = await repo.create_pending(
-        project_id=project_id, document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=project_id, document_id=uuid4(), storage_path="/fake/path/a1.pdf", chunker_version="v1", embed_config=embed_config
     )
     a2 = await repo.create_pending(
-        project_id=project_id, document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=project_id, document_id=uuid4(), storage_path="/fake/path/a2.pdf", chunker_version="v1", embed_config=embed_config
     )
 
     # Different signature (different embed_config).
     other_config = EmbedConfig(provider="openai", model="text-embedding-3-large", batch_size=16, dimensions=3072)
     b1 = await repo.create_pending(
-        project_id=project_id, document_id=uuid4(), chunker_version="v1", embed_config=other_config
+        project_id=project_id, document_id=uuid4(), storage_path="/fake/path/b1.pdf", chunker_version="v1", embed_config=other_config
     )
 
     active_status = _any_active_status()
@@ -153,7 +154,7 @@ async def test_update_progress_updates_fields_including_meta_message_error(
     embed_config: EmbedConfig,
 ) -> None:
     idx = await repo.create_pending(
-        project_id=uuid4(), document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=uuid4(), document_id=uuid4(), storage_path="/fake/path/doc.pdf", chunker_version="v1", embed_config=embed_config
     )
     await session.commit()
 
@@ -206,7 +207,7 @@ async def test_request_cancel_and_is_cancel_requested(
     embed_config: EmbedConfig,
 ) -> None:
     idx = await repo.create_pending(
-        project_id=uuid4(), document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=uuid4(), document_id=uuid4(), storage_path="/fake/path/doc.pdf", chunker_version="v1", embed_config=embed_config
     )
     await session.commit()
 
@@ -224,10 +225,10 @@ async def test_delete_index_artifacts_deletes_chunks_only_for_that_index(
     embed_config: EmbedConfig,
 ) -> None:
     idx1 = await repo.create_pending(
-        project_id=uuid4(), document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=uuid4(), document_id=uuid4(), storage_path="/fake/path/doc1.pdf", chunker_version="v1", embed_config=embed_config
     )
     idx2 = await repo.create_pending(
-        project_id=uuid4(), document_id=uuid4(), chunker_version="v1", embed_config=embed_config
+        project_id=uuid4(), document_id=uuid4(), storage_path="/fake/path/doc2.pdf", chunker_version="v1", embed_config=embed_config
     )
     await session.commit()
 

@@ -9,6 +9,7 @@ from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, DocumentNotFound
 
 
 class StartIndexingUseCase:
@@ -42,9 +43,18 @@ class StartIndexingUseCase:
 
                 if latest:
                     return to_index_status_dto(latest)
+                project= await self._uow.project_repo.get_by_id(project_id=dto.project_id)
+                if not project:
+                    raise ProjectNotFound(project_id=str(dto.project_id))  # however you handle
+
+                if project.primary_document.id != dto.document_id:
+                    raise DocumentNotFound(document_id=str(dto.document_id))
+
+                storage_path=project.primary_document.storage_path
                 created = await self._uow.index_repo.create_pending(
                     project_id=dto.project_id,
                     document_id=dto.document_id,
+                    storage_path=storage_path,
                     chunker_version=self._chunker_version,
                     embed_config=self._embed_config,
                 )

@@ -22,7 +22,7 @@ class DocumentIndexModel(Base):
 
     project_id: Mapped[UUID] = mapped_column(nullable=False, index=True)
     document_id: Mapped[UUID] = mapped_column(nullable=False, index=True)
-
+    storage_path: Mapped[str] = mapped_column(nullable=False)
     status: Mapped[IndexStatus] = mapped_column(
         SAEnum(
             IndexStatus,

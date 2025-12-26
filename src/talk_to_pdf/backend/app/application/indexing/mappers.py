@@ -14,6 +14,7 @@ def to_index_status_dto(
         project_id=index.project_id,
         document_id=index.document_id,
         index_id=index.id,
+        storage_path=index.storage_path,
         status=index.status,
         progress=index.progress,
         message=index.message,

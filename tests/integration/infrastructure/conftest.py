@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 
 import pytest_asyncio
 from alembic import command
@@ -63,3 +64,11 @@ async def session(db_engine) -> AsyncSession:
 @pytest_asyncio.fixture
 async def uow(session):
     return SqlAlchemyUnitOfWork(session)
+
+@pytest_asyncio.fixture
+def pdf_bytes() -> bytes:
+    """
+    Read a PDF file from disk and return its bytes.
+    """
+    pdf_path=Path("scripts/sample.pdf")
+    return pdf_path.read_bytes()

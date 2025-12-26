@@ -11,6 +11,7 @@ class IndexStatusDTO:
     project_id: UUID
     document_id: UUID
     index_id: UUID
+    storage_path: str
     status: IndexStatus
     progress: int  # 0..100
     message: Optional[str] = None

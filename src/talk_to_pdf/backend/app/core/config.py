@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = 'xxx'
     SKIP_AUTH: bool = False
     FILE_STORAGE_DIR:str = 'xxx'
+    OPENAI_API_KEY: str = 'xxx'
 
 
 settings = Settings()
