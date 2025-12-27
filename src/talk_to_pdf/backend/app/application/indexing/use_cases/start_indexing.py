@@ -5,6 +5,7 @@ from dataclasses import asdict
 from talk_to_pdf.backend.app.application.indexing.dto import IndexStatusDTO, StartIndexingInputDTO
 from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.application.indexing.mappers import to_index_status_dto
+from talk_to_pdf.backend.app.application.indexing.progress import report
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
@@ -68,12 +69,12 @@ class StartIndexingUseCase:
         except Exception as e:
             # Optional: mark FAILED here (new small transaction) if enqueue fails.
             async with self._uow:
-                await self._uow.index_repo.update_progress(
-                    index_id=created.id,
-                    status=IndexStatus.FAILED,
-                    progress=0,
-                    message="Failed to enqueue indexing job",
-                    error=str(e),
-                )
+                    await report(
+                        uow=self._uow,
+                        index_id=created.id,
+                        status=IndexStatus.FAILED,
+                        message="Failed to enqueue indexing job",
+                        error=str(e),
+                    )
             raise FailedToStartIndexing("Index created but failed to enqueue job") from e
         return to_index_status_dto(created)

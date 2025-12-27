@@ -21,3 +21,22 @@ class IndexStatus(StrEnum):
     @classmethod
     def active(cls) -> tuple["IndexStatus", ...]:
         return cls.PENDING, cls.RUNNING
+
+
+class IndexStep(StrEnum):
+    QUEUED = "QUEUED"
+    EXTRACTING = "EXTRACTING"
+    CHUNKING = "CHUNKING"
+    EMBEDDING = "EMBEDDING"
+    STORING = "STORING"
+    FINALIZING = "FINALIZING"
+
+
+STEP_PROGRESS: dict[IndexStep, int] = {
+    IndexStep.QUEUED: 0,
+    IndexStep.EXTRACTING: 5,
+    IndexStep.CHUNKING: 20,
+    IndexStep.EMBEDDING: 60,
+    IndexStep.STORING: 85,
+    IndexStep.FINALIZING: 95
+}
