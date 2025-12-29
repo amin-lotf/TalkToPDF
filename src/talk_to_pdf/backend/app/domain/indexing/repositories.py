@@ -4,8 +4,9 @@ from typing import Protocol
 from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
-from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft
+from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, VectorMetric
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, Vector, ChunkMatch, \
+    ChunkEmbeddingDraft
 
 
 class DocumentIndexRepository(Protocol):
@@ -57,3 +58,61 @@ class ChunkRepository(Protocol):
     async def bulk_create(self, *, index_id: UUID, chunks: list[ChunkDraft]) -> None: ...
     async def list_chunk_ids(self, *, index_id: UUID) -> list[UUID]: ...
     async def delete_by_index(self, *, index_id: UUID) -> None: ...
+
+
+class ChunkEmbeddingRepository(Protocol):
+    async def bulk_upsert(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str,
+        embeddings: list[ChunkEmbeddingDraft],
+    ) -> None:
+        """
+        Persist embeddings for chunks.
+        Upsert semantics are useful because indexing runs can be resumed/retried.
+        Uniqueness boundary should be (index_id, chunk_id, embed_signature).
+        """
+        ...
+
+    async def delete_by_index(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str | None = None,
+    ) -> None:
+        """
+        Delete embeddings for an index.
+        If embed_signature is None: delete all versions for that index.
+        """
+        ...
+
+    async def exists_for_index(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str,
+    ) -> bool:
+        """
+        Quick check used for idempotency / skipping work.
+        """
+        ...
+
+    async def similarity_search(
+        self,
+        *,
+        query: Vector,
+        top_k: int,
+        embed_signature: str,
+        index_id: UUID | None = None,
+        project_id: UUID | None = None,
+        metric: VectorMetric = VectorMetric.COSINE,
+    ) -> list[ChunkMatch]:
+        """
+        Return best-matching chunks, optionally scoped.
+        Scope rules are your call:
+          - index_id: search within a single document index
+          - project_id: search within a project
+          - neither: global search (rarely what you want)
+        """
+        ...

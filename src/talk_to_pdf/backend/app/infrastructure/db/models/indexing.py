@@ -96,7 +96,7 @@ class ChunkEmbeddingModel(Base):
     # pgvector column
     embedding: Mapped[list[float]] = mapped_column(PGVector(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
-
+    embed_signature: Mapped[str] = mapped_column(String(64), nullable=False,index=True)
     __table_args__ = (
-        UniqueConstraint("index_id", "chunk_id", name="uq_chunk_embeddings_index_chunk"),
+        UniqueConstraint("index_id", "chunk_id","embed_signature", name="uq_chunk_embeddings_index_chunk"),
     )

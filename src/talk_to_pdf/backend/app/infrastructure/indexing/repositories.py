@@ -2,15 +2,19 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, desc, select, update
+from sqlalchemy import delete, desc, select, update, exists
+from sqlalchemy.dialects.postgresql import insert
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
-from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft
+from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, VectorMetric
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, ChunkEmbeddingDraft, Vector, \
+    ChunkMatch
 from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_to_domain, create_document_index_model, \
-    create_chunk_models
-from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel
+    create_chunk_models, embedding_drafts_to_insert_rows, rows_to_chunk_matches
+from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel, \
+    ChunkEmbeddingModel
 
 
 class SqlAlchemyDocumentIndexRepository:
@@ -162,3 +166,147 @@ class SqlAlchemyChunkRepository:
         """
         stmt = delete(ChunkModel).where(ChunkModel.index_id == index_id)
         await self._session.execute(stmt)
+
+
+class SqlAlchemyChunkEmbeddingRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def bulk_upsert(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str,
+        embeddings: list[ChunkEmbeddingDraft],
+    ) -> None:
+        """
+        Upsert embeddings for (index_id, chunk_id, embed_signature).
+
+        This is resilient to retries: if the worker restarts mid-run,
+        re-running bulk_upsert overwrites existing embeddings.
+        """
+        if not embeddings:
+            return
+
+        # Optional sanity: all vectors should have same dim
+        # (We don't hard-fail on mixed dims unless you want to.)
+        dim0 = embeddings[0].vector.dim
+        if any(e.vector.dim != dim0 for e in embeddings):
+            raise ValueError("All embeddings in a bulk_upsert must have the same vector dimension")
+
+        rows = embedding_drafts_to_insert_rows(
+            index_id=index_id,
+            embed_signature=embed_signature,
+            embeddings=embeddings,
+        )
+
+        stmt = insert(ChunkEmbeddingModel).values(rows)
+
+        # Requires a UNIQUE constraint on (index_id, chunk_id, embed_signature)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[
+                ChunkEmbeddingModel.index_id,
+                ChunkEmbeddingModel.chunk_id,
+                ChunkEmbeddingModel.embed_signature,
+            ],
+            set_={
+                "chunk_index": stmt.excluded.chunk_index,
+                "embedding": stmt.excluded.embedding,
+                # If you want updated timestamps:
+                # "updated_at": func.now(),
+            },
+        )
+
+        await self._session.execute(stmt)
+        await self._session.flush()
+
+    async def delete_by_index(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str | None = None,
+    ) -> None:
+        """
+        Delete embeddings for an index.
+        If embed_signature is provided: delete only that embedding space/version.
+        """
+        stmt = delete(ChunkEmbeddingModel).where(ChunkEmbeddingModel.index_id == index_id)
+        if embed_signature is not None:
+            stmt = stmt.where(ChunkEmbeddingModel.embed_signature == embed_signature)
+        await self._session.execute(stmt)
+
+    async def exists_for_index(
+        self,
+        *,
+        index_id: UUID,
+        embed_signature: str,
+    ) -> bool:
+        """
+        True if there is at least one embedding row for this index+signature.
+        """
+        stmt = select(
+            exists()
+            .where(ChunkEmbeddingModel.index_id == index_id)
+            .where(ChunkEmbeddingModel.embed_signature == embed_signature)
+        )
+        return bool((await self._session.execute(stmt)).scalar())
+
+    async def similarity_search(
+        self,
+        *,
+        query: Vector,
+        top_k: int,
+        embed_signature: str,
+        index_id: UUID,
+        metric: VectorMetric = VectorMetric.COSINE,
+    ) -> list[ChunkMatch]:
+        """
+        Return top_k matches within a single index_id (your choice).
+
+        Score semantics:
+          - COSINE/IP: higher score is better
+          - L2: lower distance is better, we return score = -distance
+        """
+        if top_k <= 0:
+            return []
+
+        # pgvector comparator operators differ by metric:
+        # - cosine distance: embedding.cosine_distance(vec)
+        # - l2 distance: embedding.l2_distance(vec)
+        # - inner product: embedding.max_inner_product(vec)  (naming varies by pgvector sqlalchemy version)
+        #
+        # We'll implement in a way that is compatible with common pgvector.sqlalchemy comparators:
+        vec = list(query.values)
+
+        emb_col = ChunkEmbeddingModel.embedding
+
+        if metric == VectorMetric.COSINE:
+            distance_expr = emb_col.cosine_distance(vec)
+            order_expr = distance_expr.asc()
+            score_expr = (-distance_expr).label("score")
+        elif metric == VectorMetric.L2:
+            distance_expr = emb_col.l2_distance(vec)
+            order_expr = distance_expr.asc()
+            score_expr = (-distance_expr).label("score")
+        elif metric == VectorMetric.INNER_PRODUCT:
+            # Many setups use "max_inner_product" (larger is better).
+            # If your version exposes "inner_product", swap it accordingly.
+            score_expr = emb_col.max_inner_product(vec).label("score")
+            order_expr = score_expr.desc()
+        else:
+            raise ValueError(f"Unsupported metric: {metric}")
+
+        stmt = (
+            select(
+                ChunkEmbeddingModel.chunk_id,
+                ChunkEmbeddingModel.chunk_index,
+                score_expr,
+            )
+            .where(ChunkEmbeddingModel.index_id == index_id)
+            .where(ChunkEmbeddingModel.embed_signature == embed_signature)
+            .order_by(order_expr)
+            .limit(top_k)
+        )
+
+        rows = (await self._session.execute(stmt)).all()
+        return rows_to_chunk_matches(rows)

@@ -2,6 +2,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from typing import Any, Sequence
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,3 +65,35 @@ class Vector:
     def from_list(cls, values: Sequence[float]) -> "Vector":
         values = tuple(float(v) for v in values)
         return cls(values=values, dim=len(values))
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkEmbeddingDraft:
+    """
+    Domain draft for persisting an embedding.
+    """
+    chunk_id: UUID
+    chunk_index: int
+    vector: Vector
+    meta: dict[str, Any] | None = None  # optional per-embedding metadata
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkEmbeddingRef:
+    """
+    What you need to identify an embedding row without exposing DB model.
+    """
+    id: UUID
+    chunk_id: UUID
+    chunk_index: int
+    embed_signature: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChunkMatch:
+    """
+    Retrieval result: which chunk matched and with what score/distance.
+    """
+    chunk_id: UUID
+    chunk_index: int
+    score: float  # interpretation depends on metric (similarity or negative distance)

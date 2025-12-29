@@ -27,17 +27,17 @@ class FakeSessionContext(AsyncContextManager[FakeSession]):
         return None
 
 
-# class FakeTextExtractor:
-#     def __init__(self, *, text: str | None = "hello world", raise_exc: Exception | None = None) -> None:
-#         self._text = text
-#         self._exc = raise_exc
-#         self.called_with: list[bytes] = []
-#
-#     def extract(self, *, content: bytes) -> str:
-#         self.called_with.append(content)
-#         if self._exc:
-#             raise self._exc
-#         return self._text or ""
+class FakeTextExtractor:
+    def __init__(self, *, text: str | None = "hello world", raise_exc: Exception | None = None) -> None:
+        self._text = text
+        self._exc = raise_exc
+        self.called_with: list[bytes] = []
+
+    def extract(self, *, content: bytes) -> str:
+        self.called_with.append(content)
+        if self._exc:
+            raise self._exc
+        return self._text or ""
 
 
 class FakeEmbedder:
