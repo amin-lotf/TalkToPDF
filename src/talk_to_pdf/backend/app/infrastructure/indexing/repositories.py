@@ -289,10 +289,11 @@ class SqlAlchemyChunkEmbeddingRepository:
             order_expr = distance_expr.asc()
             score_expr = (-distance_expr).label("score")
         elif metric == VectorMetric.INNER_PRODUCT:
-            # Many setups use "max_inner_product" (larger is better).
-            # If your version exposes "inner_product", swap it accordingly.
-            score_expr = emb_col.max_inner_product(vec).label("score")
-            order_expr = score_expr.desc()
+            # In many pgvector/sqlalchemy versions, max_inner_product returns a distance-like value
+            # (often -dot), where smaller is better.
+            distance_expr = emb_col.max_inner_product(vec)
+            order_expr = distance_expr.asc()
+            score_expr = (-distance_expr).label("score")
         else:
             raise ValueError(f"Unsupported metric: {metric}")
 
