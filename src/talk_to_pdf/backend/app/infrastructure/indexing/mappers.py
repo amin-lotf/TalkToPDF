@@ -1,12 +1,11 @@
 from __future__ import annotations
-
 from typing import Any, Iterable
 from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, ChunkEmbeddingDraft, \
-    ChunkMatch
+    ChunkMatch, Vector
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import DocumentIndexModel, ChunkModel
 
 
@@ -59,6 +58,20 @@ def create_chunk_models(index_id:UUID,chunks:list[ChunkDraft])->list[ChunkModel]
         for c in chunks
     ]
     return models
+
+def create_chunk_embedding_drafts(
+        embeds:list[Vector],
+        chunks:list[ChunkDraft],
+        chunk_ids:list[UUID],
+        meta:dict[str, Any] | None = None ) -> list[ChunkEmbeddingDraft]:
+    return [
+        ChunkEmbeddingDraft(
+            chunk_id=chunk_id,
+            chunk_index=chunk_draft.chunk_index,
+            vector=embed_vector,
+            meta=meta,
+        ) for chunk_id, embed_vector, chunk_draft in zip(chunk_ids,embeds,chunks)
+    ]
 
 
 def embedding_drafts_to_insert_rows(

@@ -12,10 +12,11 @@ from talk_to_pdf.backend.app.application.indexing.progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, IndexStep, STEP_PROGRESS
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig, Vector
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig, Vector, ChunkEmbeddingDraft
+from talk_to_pdf.backend.app.infrastructure.indexing.mappers import create_chunk_embedding_drafts
 
 
-def _batched(items: list[str], batch_size: int) -> list[list[str]]:
+def _batched(items: list[Any], batch_size: int) -> list[list[Any]]:
     if batch_size <= 0:
         batch_size = 64
     return [items[i: i + batch_size] for i in range(0, len(items), batch_size)]
@@ -123,7 +124,7 @@ class IndexingWorkerService:
                         uow=uow,
                         index_id=index_id,
                         status=IndexStatus.RUNNING,
-                        step=IndexStep.EXTRACTING,
+                        step=IndexStep.EMBEDDING,
                         progress=pct,
                         message=f"Embedding batch {bi + 1}/{len(batches)}",
                         meta={
@@ -150,7 +151,66 @@ class IndexingWorkerService:
             )
             return None
 
+    async def store_embeds(
+            self,
+            *,
+            index_id: UUID,
+            chunks: list[ChunkDraft],
+            embeds: list[Vector],
+            embed_cfg: EmbedConfig,
+    ) -> None:
+        """
+        Persist embeddings for chunks of this index.
+        Assumes:
+          - `chunks` are in chunk_index order (or at least their chunk_index matches DB ordering)
+          - `embeds` are produced in the same order as `chunks` texts were embedded
+        """
+        if len(chunks) != len(embeds):
+            raise ValueError(f"chunks/embeds length mismatch: {len(chunks)} vs {len(embeds)}")
 
+        embed_signature = embed_cfg.signature()
+
+        async def _persist(uow: UnitOfWork) -> None:
+            # Cancel check
+            if await uow.index_repo.is_cancel_requested(index_id=index_id):
+                await self._cancel(uow=uow, index_id=index_id)
+                return
+
+            # 1) Get chunk_ids ordered by chunk_index (repo guarantees order)
+            chunk_ids = await uow.chunk_repo.list_chunk_ids(index_id=index_id)
+            if len(chunk_ids) != len(chunks):
+                raise RuntimeError(
+                    f"DB chunk count mismatch for index {index_id}: "
+                    f"{len(chunk_ids)} in DB vs {len(chunks)} in memory"
+                )
+
+            # 2) Build drafts with (chunk_id, chunk_index, vector)
+            # We trust both lists are aligned by chunk_index order.
+            drafts= create_chunk_embedding_drafts(embeds=embeds, chunks=chunks,chunk_ids=chunk_ids,meta=None)
+            # 3) Upsert
+            await uow.chunk_embedding_repo.bulk_upsert(
+                index_id=index_id,
+                embed_signature=embed_signature,
+                embeddings=drafts,
+            )
+
+            # 4) Mark ready
+            await report(
+                uow=uow,
+                index_id=index_id,
+                status=IndexStatus.READY,
+                step=IndexStep.STORING,
+                progress=100,
+                message="Index ready",
+                meta={
+                    "chunks": len(chunks),
+                    "embedder": embed_cfg.model,
+                    "embed_signature": embed_signature,
+                },
+            )
+
+
+        await self._with_uow(_persist)
 
     async def mark_failed(self, *, uow: UnitOfWork, index_id: UUID, error: str) -> None:
         await report(
@@ -204,21 +264,7 @@ class IndexingWorkerService:
             return
         # 6) Embed (batched)
         embeds = await self.embed_chunks(index_id=index_id, chunks=chunks,embed_cfg=embed_cfg)
+        if embeds is None:
+            return
 
-
-
-        # # 7) Finalize (no vector storage yet)
-        # async def _finalize(uow: UnitOfWork) -> None:
-        #     if await uow.index_repo.is_cancel_requested(index_id=index_id):
-        #         await self._cancel(uow=uow, index_id=index_id)
-        #         return
-        #
-        #     await uow.index_repo.update_progress(
-        #         index_id=index_id,
-        #         status=IndexStatus.READY,
-        #         progress=100,
-        #         message="Index ready",
-        #         meta={"chunks": len(chunks), "embedder": embed_cfg.model},
-        #     )
-        #
-        # await self._with_uow(_finalize)
+        await self.store_embeds(index_id=index_id, chunks=chunks, embeds=embeds, embed_cfg=embed_cfg)
