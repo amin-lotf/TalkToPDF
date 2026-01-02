@@ -12,7 +12,7 @@ from talk_to_pdf.backend.app.application.indexing.progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, IndexStep, STEP_PROGRESS
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig, Vector, ChunkEmbeddingDraft
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig, Vector
 from talk_to_pdf.backend.app.infrastructure.indexing.mappers import create_chunk_embedding_drafts
 
 
@@ -90,7 +90,7 @@ class IndexingWorkerService:
             raise RuntimeError("Failed to extract text") from e
 
     async def create_and_store_chunks(self, *, index_id: UUID, text: str) -> Optional[list[ChunkDraft]]:
-        chunks = self.deps.chunker.chunk(text)
+        chunks = self.deps.chunker.chunk(text=text)
 
         async def _persist(uow: UnitOfWork) -> Optional[list[ChunkDraft]]:
             if await uow.index_repo.is_cancel_requested(index_id=index_id):

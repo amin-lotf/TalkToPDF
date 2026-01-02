@@ -80,6 +80,7 @@ class TestStartIndexingUseCase:
     ) -> None:
         """Should create a new index and enqueue the indexing job."""
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -124,6 +125,7 @@ class TestStartIndexingUseCase:
         )
 
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -166,6 +168,7 @@ class TestStartIndexingUseCase:
         )
 
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -190,6 +193,7 @@ class TestStartIndexingUseCase:
     ) -> None:
         """Should raise ProjectNotFound if project doesn't exist."""
         dto = StartIndexingInputDTO(
+            owner_id=uuid4(),
             project_id=uuid4(),
             document_id=uuid4(),
         )
@@ -207,6 +211,7 @@ class TestStartIndexingUseCase:
     ) -> None:
         """Should raise DocumentNotFound if document ID doesn't match project's primary document."""
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=uuid4(),  # Wrong document ID
         )
@@ -234,6 +239,7 @@ class TestStartIndexingUseCase:
         )
 
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -278,6 +284,7 @@ class TestStartIndexingUseCase:
         )
 
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -302,6 +309,7 @@ class TestStartIndexingUseCase:
     ) -> None:
         """Should include the document's storage path in the created index."""
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -323,6 +331,7 @@ class TestStartIndexingUseCase:
     ) -> None:
         """Should commit the unit of work on successful execution."""
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )
@@ -358,6 +367,7 @@ class TestStartIndexingUseCase:
         )
 
         dto = StartIndexingInputDTO(
+            owner_id=project_with_document.owner_id,
             project_id=project_with_document.id,
             document_id=project_with_document.primary_document.id,
         )

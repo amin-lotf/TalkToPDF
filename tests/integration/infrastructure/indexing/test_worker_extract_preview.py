@@ -99,6 +99,7 @@ async def test_worker_extract_prints_preview_lines(session,uow,pdf_bytes, monkey
 
     await start_indexing_uc.execute(
         StartIndexingInputDTO(
+            owner_id=project_out.owner_id,
             project_id=project_out.id,
             document_id=project_out.primary_document.id,
         )
@@ -186,6 +187,7 @@ async def test_worker_chunks_returns_same_len(session,uow,pdf_bytes, monkeypatch
 
     await start_indexing_uc.execute(
         StartIndexingInputDTO(
+            owner_id=project_out.owner_id,
             project_id=project_out.id,
             document_id=project_out.primary_document.id,
         )
@@ -283,6 +285,7 @@ async def test_worker_embeds_returns_same_len(session,uow,pdf_bytes, monkeypatch
 
     await start_indexing_uc.execute(
         StartIndexingInputDTO(
+            owner_id=project_out.owner_id,
             project_id=project_out.id,
             document_id=project_out.primary_document.id,
         )
@@ -374,6 +377,7 @@ async def test_worker_store_embeds_persists_and_marks_ready(
     )
     await start_indexing_uc.execute(
         StartIndexingInputDTO(
+            owner_id=project_out.owner_id,
             project_id=project_out.id,
             document_id=project_out.primary_document.id,
         )

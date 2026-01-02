@@ -84,6 +84,7 @@ async def test_start_indexing_creates_pending_and_enqueues_once(session, uow, pd
     )
 
     dto = StartIndexingInputDTO(
+        owner_id=project_out.owner_id,
         project_id=project_out.id,
         document_id=project_out.primary_document.id,
     )
@@ -124,6 +125,7 @@ async def test_start_indexing_idempotent_returns_latest_active_and_does_not_enqu
     )
 
     dto = StartIndexingInputDTO(
+        owner_id=project_out.owner_id,
         project_id=project_out.id,
         document_id=project_out.primary_document.id,
     )
@@ -165,6 +167,7 @@ async def test_start_indexing_project_not_found_raises_failed_to_start_indexing(
     with pytest.raises(FailedToStartIndexing):
         await uc.execute(
             StartIndexingInputDTO(
+                owner_id=uuid4(),
                 project_id=uuid4(),
                 document_id=uuid4(),
             )
@@ -192,6 +195,7 @@ async def test_start_indexing_document_mismatch_raises_failed_to_start_indexing(
     with pytest.raises(FailedToStartIndexing):
         await uc.execute(
             StartIndexingInputDTO(
+                owner_id=project_out.owner_id,
                 project_id=project_out.id,
                 document_id=uuid4(),
             )
@@ -219,6 +223,7 @@ async def test_start_indexing_enqueue_failure_marks_failed_and_raises(
     )
 
     dto = StartIndexingInputDTO(
+        owner_id=project_out.owner_id,
         project_id=project_out.id,
         document_id=project_out.primary_document.id,
     )

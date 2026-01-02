@@ -19,7 +19,8 @@ class TextExtractor(Protocol):
 
 
 class Chunker(Protocol):
-    def chunk(self, text: str) -> list[ChunkDraft]: ...
+    def chunk(self, *,text: str) -> list[ChunkDraft]: ...
+
 
 
 class AsyncEmbedder(Protocol):

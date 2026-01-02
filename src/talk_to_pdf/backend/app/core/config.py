@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +12,13 @@ class Settings(BaseSettings):
     SKIP_AUTH: bool = False
     FILE_STORAGE_DIR:str = 'xxx'
     OPENAI_API_KEY: str = 'xxx'
+    EMBED_PROVIDER: str = 'xxx'
+    EMBED_MODEL: str = 'xxx'
+    EMBED_BATCH_SIZE: int = 0
+    EMBED_DIMENSIONS: Optional[int] = 0
+    CHUNKER_KIND: str = "xxx"
+    CHUNKER_MAX_CHARS: int = 0
+    CHUNKER_OVERLAP: int = 0
 
 
 settings = Settings()

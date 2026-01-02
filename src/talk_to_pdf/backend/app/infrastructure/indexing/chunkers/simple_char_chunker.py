@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List
+
+from talk_to_pdf.backend.app.core import settings
 from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
 
 
 @dataclass(frozen=True, slots=True)
 class SimpleCharChunker:
-    max_chars: int = 1200
-    overlap: int = 150
+    max_chars: int
+    overlap: int
 
-    def chunk(self, text: str) -> list[ChunkDraft]:
+    def chunk(self, *,text: str) -> list[ChunkDraft]:
         text = text.strip()
         if not text:
             return []
@@ -33,3 +35,4 @@ class SimpleCharChunker:
             start = max(0, end - self.overlap)
 
         return chunks
+

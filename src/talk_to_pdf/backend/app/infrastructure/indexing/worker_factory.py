@@ -15,7 +15,7 @@ from talk_to_pdf.backend.app.infrastructure.indexing.service import IndexingWork
 def build_worker() -> IndexingWorkerService:
     deps = WorkerDeps(
         extractor=PyPDFTextExtractor(),
-        chunker=SimpleCharChunker(max_chars=1200, overlap=150),
+        chunker=SimpleCharChunker(max_chars=settings.CHUNKER_MAX_CHARS, overlap=settings.CHUNKER_OVERLAP),
         embedder_factory=OpenAIEmbedderFactory(api_key=settings.OPENAI_API_KEY),
         session_factory=SessionLocal,
         uow_factory=SqlAlchemyUnitOfWork,

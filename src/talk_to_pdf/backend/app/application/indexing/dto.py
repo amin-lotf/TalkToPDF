@@ -24,6 +24,7 @@ class IndexStatusDTO:
 
 @dataclass(frozen=True, slots=True)
 class StartIndexingInputDTO:
+    owner_id: UUID
     project_id: UUID
     document_id: UUID
 
@@ -31,14 +32,17 @@ class StartIndexingInputDTO:
 
 @dataclass(frozen=True, slots=True)
 class GetIndexStatusByIdInputDTO:
+    owner_id: UUID
     index_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
 class GetLatestIndexStatusInputDTO:
+    owner_id: UUID
     project_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
 class CancelIndexingInputDTO:
+    owner_id: UUID
     index_id: UUID

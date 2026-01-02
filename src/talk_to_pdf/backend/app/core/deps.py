@@ -5,12 +5,15 @@ from typing import AsyncIterator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.core import settings
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
+from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
+from talk_to_pdf.backend.app.infrastructure.indexing.runner_spawn import SpawnProcessIndexingRunner
 
 
 async def get_session()->AsyncIterator[AsyncSession]:
@@ -25,6 +28,18 @@ async def get_uow(
     uow = SqlAlchemyUnitOfWork(session)
     yield uow
 
+@lru_cache
+def get_indexing_runner()->IndexingRunner:
+    return SpawnProcessIndexingRunner()
+
+
+def get_embed_config()->EmbedConfig:
+    return EmbedConfig(
+        provider=settings.EMBED_PROVIDER,
+        model=settings.EMBED_MODEL,
+        batch_size=settings.EMBED_BATCH_SIZE,
+        dimensions=settings.EMBED_DIMENSIONS,
+    )
 
 
 @lru_cache

@@ -15,9 +15,14 @@ class GetIndexStatusUseCase:
 
     async def execute(self, dto: GetIndexStatusByIdInputDTO) -> IndexStatusDTO:
         async with self._uow:
-            index = await self._uow.index_repo.get_by_id(index_id=dto.index_id)
+            index = await self._uow.index_repo.get_by_owner_and_id(
+                owner_id=dto.owner_id,
+                index_id=dto.index_id,
+            )
             if not index:
+                # Important: do NOT reveal whether it exists but belongs to someone else
                 raise IndexNotFound(index_id=str(dto.index_id))
+
             return to_index_status_dto(index)
 
 

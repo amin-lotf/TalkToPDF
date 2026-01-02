@@ -43,7 +43,26 @@ async def get_current_user_use_case(
 ) -> GetCurrentUserUseCase:
     return GetCurrentUserUseCase(uow)
 
-DEV_USER = CurrentUserDTO(id=UUID('66449af6-23c2-4bd9-8d66-369d67c548e0'), email="dev@example.com", name="Dev", is_active=True)
+DEV_USER = CurrentUserDTO(id=UUID('79376ad0-f4ea-42a7-ac46-5bbbbbe45f46'), email="dev@example.com", name="devmod", is_active=True)
+
+async def ensure_dev_user_exists(
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+) -> None:
+    if not settings.SKIP_AUTH:
+        return
+
+    async with uow:
+        # Adjust repo method names to yours:
+        existing = await uow.users.get_by_id(DEV_USER.id)
+        if existing is None:
+            # Create domain user however your domain expects
+            user = await uow.users.create(  # or uow.users.add(...)
+                id=DEV_USER.id,
+                email=DEV_USER.email,
+                name=DEV_USER.name,
+                is_active=True,
+                # password_hash=None etc, depending on schema
+            )
 
 async def get_jwt_payload(token: Annotated[str|None, Depends(oauth2_scheme)]) -> dict:
     if settings.SKIP_AUTH:
@@ -62,7 +81,6 @@ async def get_logged_in_user(
         payload: Annotated[dict , Depends(get_jwt_payload)],
         use_case: Annotated[GetCurrentUserUseCase, Depends(get_current_user_use_case)],
 ) -> CurrentUserDTO:
-    print(settings.SKIP_AUTH)
     if settings.SKIP_AUTH:
         return DEV_USER
     sub = payload.get("sub")

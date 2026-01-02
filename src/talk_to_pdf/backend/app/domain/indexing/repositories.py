@@ -24,11 +24,21 @@ class DocumentIndexRepository(Protocol):
     async def get_latest_by_project(self, *, project_id: UUID) -> DocumentIndex | None:
         ...
 
+    async def get_latest_by_project_and_owner(self, *, project_id: UUID, owner_id: UUID) -> DocumentIndex | None:
+        ...
+
     async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,
                                                          embed_signature: str) -> DocumentIndex | None:
         ...
 
+    async def get_latest_active_by_project_and_owner_and_signature(self, *, project_id: UUID, owner_id: UUID,
+                                                                   embed_signature: str) -> DocumentIndex | None:
+        ...
+
     async def get_by_id(self, *, index_id: UUID) -> DocumentIndex | None:
+        ...
+
+    async def get_by_owner_and_id(self, *, owner_id: UUID, index_id: UUID) -> DocumentIndex | None:
         ...
 
     async def update_progress(

@@ -2,7 +2,6 @@ from talk_to_pdf.backend.app.application.indexing.dto import CancelIndexingInput
 from talk_to_pdf.backend.app.application.indexing.mappers import to_index_status_dto
 from talk_to_pdf.backend.app.application.indexing.progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
-from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.errors import IndexNotFound
 
 
@@ -21,7 +20,7 @@ class CancelIndexingUseCase:
 
     async def execute(self, dto: CancelIndexingInputDTO) -> IndexStatusDTO:
         async with self._uow:
-            index = await self._uow.index_repo.get_by_id(index_id=dto.index_id)
+            index = await self._uow.index_repo.get_by_owner_and_id(index_id=dto.index_id, owner_id=dto.owner_id)
             if not index:
                 raise IndexNotFound(index_id=str(dto.index_id))
 

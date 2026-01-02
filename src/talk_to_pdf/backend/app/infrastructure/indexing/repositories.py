@@ -11,6 +11,7 @@ from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, VectorMetric
 from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, ChunkEmbeddingDraft, Vector, \
     ChunkMatch
+from talk_to_pdf.backend.app.infrastructure.db.models import ProjectModel
 from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_to_domain, create_document_index_model, \
     create_chunk_models, embedding_drafts_to_insert_rows, rows_to_chunk_matches
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel, \
@@ -51,6 +52,17 @@ class SqlAlchemyDocumentIndexRepository:
         m = (await self._session.execute(stmt)).scalar_one_or_none()
         return index_model_to_domain(m) if m else None
 
+    async def get_latest_by_project_and_owner(self, *, project_id: UUID, owner_id: UUID) -> DocumentIndex | None:
+        stmt = (
+            select(DocumentIndexModel)
+            .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
+            .where(DocumentIndexModel.project_id == project_id, ProjectModel.owner_id == owner_id)
+            .order_by(desc(DocumentIndexModel.created_at))
+            .limit(1)
+        )
+        m = (await self._session.execute(stmt)).scalar_one_or_none()
+        return index_model_to_domain(m) if m else None
+
     async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,
                                                          embed_signature: str) -> DocumentIndex | None:
         stmt = (
@@ -64,10 +76,37 @@ class SqlAlchemyDocumentIndexRepository:
         m = (await self._session.execute(stmt)).scalar_one_or_none()
         return index_model_to_domain(m) if m else None
 
+    async def get_latest_active_by_project_and_owner_and_signature(self, *, project_id: UUID,owner_id: UUID,
+                                                         embed_signature: str) -> DocumentIndex | None:
+        stmt = (
+            select(DocumentIndexModel)
+            .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
+            .where(DocumentIndexModel.project_id == project_id)
+            .where(ProjectModel.owner_id == owner_id)
+            .where(DocumentIndexModel.embed_signature == embed_signature)
+            .where(DocumentIndexModel.status.in_(IndexStatus.active()))
+            .order_by(desc(DocumentIndexModel.created_at))
+            .limit(1)
+        )
+        m = (await self._session.execute(stmt)).scalar_one_or_none()
+        return index_model_to_domain(m) if m else None
+
     async def get_by_id(self, *, index_id: UUID) -> DocumentIndex | None:
         stmt = select(DocumentIndexModel).where(DocumentIndexModel.id == index_id)
         m = (await self._session.execute(stmt)).scalar_one_or_none()
         return index_model_to_domain(m) if m else None
+
+    async def get_by_owner_and_id(self, *, owner_id: UUID, index_id: UUID) -> DocumentIndex | None:
+        stmt = (
+            select(DocumentIndexModel)
+            .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
+            .where(
+                DocumentIndexModel.id == index_id,
+                ProjectModel.owner_id == owner_id,
+            )
+        )
+        model = await self._session.scalar(stmt)
+        return index_model_to_domain(model) if model else None
 
     async def update_progress(
             self,
