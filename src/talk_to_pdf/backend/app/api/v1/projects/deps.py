@@ -5,8 +5,7 @@ from fastapi import Depends
 from talk_to_pdf.backend.app.application.projects.use_cases import CreateProjectUseCase, ListUserProjectsUseCase, \
     DeleteProjectUseCase, RenameProjectUseCase
 from talk_to_pdf.backend.app.application.projects.use_cases.get_project import GetProjectUseCase
-from talk_to_pdf.backend.app.core import get_uow
-from talk_to_pdf.backend.app.core.deps import get_file_storage
+from talk_to_pdf.backend.app.core.deps import get_uow, get_file_storage
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 

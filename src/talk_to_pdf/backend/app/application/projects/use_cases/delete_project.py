@@ -1,7 +1,6 @@
 from __future__ import annotations
 from talk_to_pdf.backend.app.application.projects.dto import DeleteProjectInputDTO
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
-from talk_to_pdf.backend.app.domain.projects import ProjectRepository
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToDeleteProject, \
     FailedToDeleteProjectDocument
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
@@ -21,7 +20,7 @@ class DeleteProjectUseCase:
             if not project:
                 raise ProjectNotFound(project_id=str(dto.project_id))
             try:
-                await self._file_storage.delete(project.primary_document.storage_path)
+                await self._file_storage.delete(storage_path=project.primary_document.storage_path)
             except Exception:
                 raise FailedToDeleteProjectDocument(project.name.value)
             try:

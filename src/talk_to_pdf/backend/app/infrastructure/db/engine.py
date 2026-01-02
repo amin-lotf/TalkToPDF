@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine
-from talk_to_pdf.backend.app.core import settings
+from talk_to_pdf.backend.app.core.config import settings
 
 ASYNC_DATABASE_URI = settings.SQLALCHEMY_DATABASE_URL
 

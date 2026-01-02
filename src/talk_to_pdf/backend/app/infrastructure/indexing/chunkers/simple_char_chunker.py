@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from talk_to_pdf.backend.app.core import settings
 from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
 
 

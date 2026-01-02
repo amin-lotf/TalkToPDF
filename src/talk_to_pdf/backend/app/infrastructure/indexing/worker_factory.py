@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from talk_to_pdf.backend.app.core import settings
+from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage

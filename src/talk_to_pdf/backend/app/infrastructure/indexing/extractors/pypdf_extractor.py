@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from talk_to_pdf.backend.app.core import settings
-
 
 class PyPDFTextExtractor:
     def extract(self, *, content: bytes) -> str:

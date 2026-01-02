@@ -222,3 +222,41 @@ class Api:
         )
         resp.raise_for_status()
         return resp.json()
+
+    # ---------- Indexing endpoints ----------
+
+    @handle_httpx_errors
+    def start_indexing(self, access_token: Optional[str], *, project_id: str, document_id: str) -> Dict[str, Any]:
+        resp = self._client.post(
+            f"/indexing/projects/{project_id}/documents/{document_id}/start",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def get_latest_index_status(self, access_token: Optional[str], *, project_id: str) -> Dict[str, Any]:
+        resp = self._client.get(
+            f"/indexing/projects/{project_id}/latest",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def get_index_status(self, access_token: Optional[str], *, index_id: str) -> Dict[str, Any]:
+        resp = self._client.get(
+            f"/indexing/{index_id}",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def cancel_indexing(self, access_token: Optional[str], *, index_id: str) -> None:
+        resp = self._client.post(
+            f"/indexing/{index_id}/cancel",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return None

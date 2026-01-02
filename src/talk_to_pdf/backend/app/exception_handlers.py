@@ -2,6 +2,7 @@ from fastapi import FastAPI,Request, status
 from fastapi.responses import JSONResponse
 
 from talk_to_pdf.backend.app.domain.files.errors import FailedToSaveFile
+from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing, IndexNotFound, NoIndexesForProject
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToCreateProject
 from talk_to_pdf.backend.app.domain.users import InvalidCredentialsError, InactiveUserError, UserNotFoundError, \
     RegistrationError
@@ -56,3 +57,25 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": str(exc)},
         )
+
+    @app.exception_handler(FailedToStartIndexing)
+    async def failed_to_start_indexing(_: Request, exc: FailedToStartIndexing):
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(IndexNotFound)
+    async def index_not_found(_: Request, exc: IndexNotFound):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(NoIndexesForProject)
+    async def index_for_project_not_found(_: Request, exc: NoIndexesForProject):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+

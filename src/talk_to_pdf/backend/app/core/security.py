@@ -4,7 +4,7 @@ from typing import Union, Any
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-from talk_to_pdf.backend.app.core import settings
+from talk_to_pdf.backend.app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

@@ -7,8 +7,8 @@ from talk_to_pdf.backend.app.application.indexing.use_cases.cancel_indexing impo
 from talk_to_pdf.backend.app.application.indexing.use_cases.get_index_status import GetIndexStatusUseCase
 from talk_to_pdf.backend.app.application.indexing.use_cases.get_latest_index_status import GetLatestIndexStatusUseCase
 from talk_to_pdf.backend.app.application.indexing.use_cases.start_indexing import StartIndexingUseCase
-from talk_to_pdf.backend.app.core import get_uow, settings
-from talk_to_pdf.backend.app.core.deps import get_indexing_runner, get_embed_config
+from talk_to_pdf.backend.app.core.config import settings
+from talk_to_pdf.backend.app.core.deps import get_uow, get_indexing_runner, get_embed_config
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
 

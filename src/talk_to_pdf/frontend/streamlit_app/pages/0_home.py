@@ -48,7 +48,7 @@ def _sidebar_projects() -> None:
                 return
 
             try:
-                api.create_project(
+                created = api.create_project(
                     token,
                     name=name.strip(),
                     file_name=pdf.name,
@@ -59,8 +59,19 @@ def _sidebar_projects() -> None:
                 # reset uploader (forms don't clear uploader reliably)
                 st.session_state["new_project_uploader_key"] += 1
 
-                st.success("Project created")
-                st.session_state["new_project_uploader_key"] += 1
+                # ✅ YOUR REAL RESPONSE SHAPE:
+                # ProjectResponse.id -> project_id
+                # ProjectResponse.primary_document.id -> document_id
+                project_id = str(created["id"])
+                document_id = str(created["primary_document"]["id"])
+
+                # store selection + doc for indexing
+                st.session_state["selected_project_id"] = project_id
+                st.session_state["pending_index_document_id"] = document_id
+                st.session_state["auto_start_indexing"] = True
+
+                st.success("Project created — opening it…")
+                st.switch_page("pages/3_project.py")
 
             except ApiError as e:
                 st.error(str(e))

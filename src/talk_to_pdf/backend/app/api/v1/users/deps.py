@@ -7,9 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from talk_to_pdf.backend.app.application.users import CurrentUserDTO
 from talk_to_pdf.backend.app.application.users.use_cases import RegisterUserUseCase, LoginUserUseCase
 from talk_to_pdf.backend.app.application.users.use_cases.get_current_user import GetCurrentUserUseCase
-from talk_to_pdf.backend.app.core import BcryptPasswordHasher
-from talk_to_pdf.backend.app.core import get_uow
-from talk_to_pdf.backend.app.core.security import decode_access_token
+from talk_to_pdf.backend.app.core.security import BcryptPasswordHasher, decode_access_token
+from talk_to_pdf.backend.app.core.deps import get_uow
 from talk_to_pdf.backend.app.domain.users import UserNotFoundError
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.core.config import settings
