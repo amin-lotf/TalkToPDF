@@ -6,7 +6,7 @@ from typing import List, Sequence
 
 class LangChainEmbedder:
     """
-    Thin adapter so worker uses a stable interface.
+    Thin adapter so the worker uses a stable interface.
     """
 
     def __init__(self, lc_embeddings) -> None:

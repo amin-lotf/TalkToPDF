@@ -42,7 +42,3 @@ STEP_PROGRESS: dict[IndexStep, int] = {
 }
 
 
-class VectorMetric(StrEnum):
-    COSINE = "cosine"
-    L2 = "l2"
-    INNER_PRODUCT = "ip"

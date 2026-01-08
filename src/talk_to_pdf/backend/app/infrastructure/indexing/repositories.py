@@ -8,12 +8,14 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
-from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, VectorMetric
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, ChunkEmbeddingDraft, Vector, \
-    ChunkMatch
+from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
+from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, ChunkEmbeddingDraft
+from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
+from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
 from talk_to_pdf.backend.app.infrastructure.db.models import ProjectModel
 from talk_to_pdf.backend.app.infrastructure.indexing.mappers import index_model_to_domain, create_document_index_model, \
-    create_chunk_models, embedding_drafts_to_insert_rows, rows_to_chunk_matches
+    create_chunk_models, embedding_drafts_to_insert_rows, rows_to_chunk_matches, chunk_model_to_domain
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import ChunkModel, DocumentIndexModel, \
     ChunkEmbeddingModel
 
@@ -102,6 +104,19 @@ class SqlAlchemyDocumentIndexRepository:
             .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
             .where(
                 DocumentIndexModel.id == index_id,
+                ProjectModel.owner_id == owner_id,
+            )
+        )
+        model = await self._session.scalar(stmt)
+        return index_model_to_domain(model) if model else None
+
+    async def get_by_owner_project_and_id(self, *, owner_id: UUID, project_id:UUID,index_id: UUID) -> DocumentIndex | None:
+        stmt = (
+            select(DocumentIndexModel)
+            .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
+            .where(
+                DocumentIndexModel.id == index_id,
+                ProjectModel.id == project_id,
                 ProjectModel.owner_id == owner_id,
             )
         )
@@ -206,8 +221,15 @@ class SqlAlchemyChunkRepository:
         stmt = delete(ChunkModel).where(ChunkModel.index_id == index_id)
         await self._session.execute(stmt)
 
+    async def get_many_by_ids_for_index(self, *, index_id: UUID, ids: list[UUID]) -> list[Chunk]:
+        stmt = select(ChunkModel).where(
+            ChunkModel.index_id == index_id,
+            ChunkModel.id.in_(ids),
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return [chunk_model_to_domain(m) for m in rows]
 
-class SqlAlchemyChunkEmbeddingRepository:
+class SqlAlchemyChunkVectorRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork

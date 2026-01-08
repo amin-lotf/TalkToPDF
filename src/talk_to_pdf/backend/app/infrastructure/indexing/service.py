@@ -7,12 +7,14 @@ from uuid import UUID
 import anyio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from talk_to_pdf.backend.app.application.indexing.interfaces import Chunker, EmbedderFactory, TextExtractor
-from talk_to_pdf.backend.app.application.indexing.progress import report
+from talk_to_pdf.backend.app.application.indexing.interfaces import Chunker, TextExtractor
+from talk_to_pdf.backend.app.application.common.interfaces import EmbedderFactory
+from talk_to_pdf.backend.app.application.indexing.indexing_progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, IndexStep, STEP_PROGRESS
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig, Vector
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
+from talk_to_pdf.backend.app.domain.common.value_objects import Vector, EmbedConfig
 from talk_to_pdf.backend.app.infrastructure.indexing.mappers import create_chunk_embedding_drafts
 
 

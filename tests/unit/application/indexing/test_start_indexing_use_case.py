@@ -8,7 +8,7 @@ from talk_to_pdf.backend.app.application.indexing.dto import StartIndexingInputD
 from talk_to_pdf.backend.app.application.indexing.use_cases.start_indexing import StartIndexingUseCase
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 from talk_to_pdf.backend.app.domain.projects.entities import Project, ProjectDocument
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, DocumentNotFound
 from talk_to_pdf.backend.app.domain.projects.value_objects import ProjectName

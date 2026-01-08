@@ -11,7 +11,7 @@ from talk_to_pdf.backend.app.application.indexing.dto import StartIndexingInputD
 from talk_to_pdf.backend.app.application.indexing.use_cases.start_indexing import StartIndexingUseCase
 from talk_to_pdf.backend.app.application.projects.dto import CreateProjectInputDTO
 from talk_to_pdf.backend.app.application.projects.use_cases.create_project import CreateProjectUseCase
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing
 from talk_to_pdf.backend.app.infrastructure.db.models import DocumentIndexModel
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage

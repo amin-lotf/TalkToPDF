@@ -2,7 +2,7 @@ from talk_to_pdf.backend.app.application.indexing.dto import GetLatestIndexStatu
 from talk_to_pdf.backend.app.application.indexing.mappers import to_index_status_dto
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.indexing.errors import NoIndexesForProject
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 
 
 class GetLatestIndexStatusUseCase:

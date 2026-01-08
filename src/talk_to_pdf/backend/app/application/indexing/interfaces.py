@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Protocol, Sequence, List
+from typing import Protocol
 from uuid import UUID
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, EmbedConfig
+
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
 
 
 class IndexingRunner(Protocol):
@@ -22,10 +22,3 @@ class Chunker(Protocol):
     def chunk(self, *,text: str) -> list[ChunkDraft]: ...
 
 
-
-class AsyncEmbedder(Protocol):
-    async def aembed_documents(self, texts: list[str]) -> list[list[float]]: ...
-
-
-class EmbedderFactory(Protocol):
-    def create(self, cfg: EmbedConfig) -> AsyncEmbedder: ...

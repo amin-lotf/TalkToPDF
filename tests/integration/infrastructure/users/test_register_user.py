@@ -1,7 +1,7 @@
 import pytest
 from talk_to_pdf.backend.app.application.users import RegisterUserInput
 from talk_to_pdf.backend.app.application.users.use_cases import RegisterUserUseCase
-from talk_to_pdf.backend.app.core import BcryptPasswordHasher
+from talk_to_pdf.backend.app.core.security import BcryptPasswordHasher
 
 pytestmark = pytest.mark.asyncio
 

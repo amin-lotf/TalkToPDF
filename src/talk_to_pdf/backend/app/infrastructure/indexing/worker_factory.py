@@ -7,7 +7,7 @@ from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
 from talk_to_pdf.backend.app.infrastructure.indexing.chunkers.simple_char_chunker import SimpleCharChunker
-from talk_to_pdf.backend.app.infrastructure.indexing.embedders.factory_openai_langchain import OpenAIEmbedderFactory
+from talk_to_pdf.backend.app.infrastructure.common.embedders import OpenAIEmbedderFactory
 from talk_to_pdf.backend.app.infrastructure.indexing.extractors.pypdf_extractor import PyPDFTextExtractor
 from talk_to_pdf.backend.app.infrastructure.indexing.service import IndexingWorkerService, WorkerDeps
 

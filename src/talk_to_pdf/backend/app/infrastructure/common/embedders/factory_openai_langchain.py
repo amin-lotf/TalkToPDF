@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 from langchain_openai import OpenAIEmbeddings
 
-from talk_to_pdf.backend.app.application.indexing.interfaces import AsyncEmbedder
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
-from talk_to_pdf.backend.app.infrastructure.indexing.embedders.langchain_openai_embedder import LangChainEmbedder
+from talk_to_pdf.backend.app.application.common.interfaces import AsyncEmbedder
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.infrastructure.common.embedders.langchain_openai_embedder import LangChainEmbedder
 
 
 @dataclass(frozen=True, slots=True)

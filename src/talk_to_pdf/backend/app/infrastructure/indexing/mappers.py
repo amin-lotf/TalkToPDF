@@ -4,8 +4,9 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig, ChunkDraft, ChunkEmbeddingDraft, \
-    ChunkMatch, Vector
+from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, ChunkEmbeddingDraft
+from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
+from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import DocumentIndexModel, ChunkModel
 
 
@@ -114,3 +115,14 @@ def rows_to_chunk_matches(rows: Iterable[object]) -> list[ChunkMatch]:
         )
         for row in rows
     ]
+
+def chunk_model_to_domain(m:ChunkModel)->Chunk:
+    return Chunk(
+        id=m.id,
+        index_id=m.index_id,
+        chunk_index=m.chunk_index,
+        text=m.text,
+        meta=m.meta,
+        created_at=m.created_at,
+    )
+

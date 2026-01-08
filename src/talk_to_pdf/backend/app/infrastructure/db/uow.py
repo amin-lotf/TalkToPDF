@@ -2,7 +2,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.infrastructure.indexing.repositories import SqlAlchemyDocumentIndexRepository, \
-    SqlAlchemyChunkRepository, SqlAlchemyChunkEmbeddingRepository
+    SqlAlchemyChunkRepository, SqlAlchemyChunkVectorRepository
 from talk_to_pdf.backend.app.infrastructure.projects.repositories import SqlAlchemyProjectRepository
 from talk_to_pdf.backend.app.infrastructure.users.repositories import SqlAlchemyUserRepository
 
@@ -14,7 +14,9 @@ class SqlAlchemyUnitOfWork:
         self.project_repo=SqlAlchemyProjectRepository(session)
         self.index_repo=SqlAlchemyDocumentIndexRepository(session)
         self.chunk_repo = SqlAlchemyChunkRepository(session)
-        self.chunk_embedding_repo = SqlAlchemyChunkEmbeddingRepository(session)
+        vec_repo = SqlAlchemyChunkVectorRepository(session)
+        self.chunk_embedding_repo = vec_repo
+        self.chunk_search_repo = vec_repo
 
     async def commit(self) -> None:
         await self._session.commit()

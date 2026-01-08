@@ -7,7 +7,7 @@ from alembic.config import Config
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from talk_to_pdf.backend.app.core import settings
+from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 
 

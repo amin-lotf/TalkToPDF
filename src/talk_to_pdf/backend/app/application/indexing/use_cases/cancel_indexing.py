@@ -1,6 +1,6 @@
 from talk_to_pdf.backend.app.application.indexing.dto import CancelIndexingInputDTO, IndexStatusDTO
 from talk_to_pdf.backend.app.application.indexing.mappers import to_index_status_dto
-from talk_to_pdf.backend.app.application.indexing.progress import report
+from talk_to_pdf.backend.app.application.indexing.indexing_progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.indexing.errors import IndexNotFound
 

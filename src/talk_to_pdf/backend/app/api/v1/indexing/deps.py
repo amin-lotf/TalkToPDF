@@ -10,7 +10,7 @@ from talk_to_pdf.backend.app.application.indexing.use_cases.start_indexing impor
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.core.deps import get_uow, get_indexing_runner, get_embed_config
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
-from talk_to_pdf.backend.app.domain.indexing.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 
 
 def get_chunker_version() -> str:
