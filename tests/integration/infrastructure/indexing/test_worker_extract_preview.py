@@ -9,6 +9,7 @@ from sqlalchemy import select, func
 
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, EmbedConfig
+from talk_to_pdf.backend.app.infrastructure.common.embedders.factory_openai_langchain import OpenAIEmbedderFactory
 from talk_to_pdf.backend.app.infrastructure.db.models import DocumentIndexModel, ChunkEmbeddingModel
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.application.projects.dto import CreateProjectInputDTO
@@ -17,7 +18,6 @@ from talk_to_pdf.backend.app.application.projects.use_cases.create_project impor
 from talk_to_pdf.backend.app.application.indexing.dto import StartIndexingInputDTO
 from talk_to_pdf.backend.app.application.indexing.use_cases.start_indexing import StartIndexingUseCase
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
-from talk_to_pdf.backend.app.infrastructure.common.embedders import OpenAIEmbedderFactory
 
 from talk_to_pdf.backend.app.infrastructure.indexing.extractors.pypdf_extractor import PyPDFTextExtractor
 from talk_to_pdf.backend.app.infrastructure.indexing.chunkers.simple_char_chunker import SimpleCharChunker
