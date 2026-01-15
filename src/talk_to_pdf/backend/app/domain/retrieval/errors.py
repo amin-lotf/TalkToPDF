@@ -3,9 +3,8 @@ class InvalidRetrieval(Exception):
         super().__init__(reason)
 
 class IndexNotFoundOrForbidden(Exception):
-    def __init__(self, *, index_id: str) -> None:
-        super().__init__(f"Index not found: {index_id}")
-        self.index_id = index_id
+    def __init__(self) -> None:
+        super().__init__(f"Index not found")
 
 class IndexNotReady(Exception):
     def __init__(self, *, index_id: str) -> None:

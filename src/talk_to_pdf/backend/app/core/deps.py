@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, Annotated, Callable
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +27,13 @@ async def get_uow(
     # the transaction lifecycle (commit/rollback) is handled by UnitOfWork
     uow = SqlAlchemyUnitOfWork(session)
     yield uow
+
+def get_uow_factory(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Callable[[], UnitOfWork]:
+    def _factory() -> UnitOfWork:
+        return SqlAlchemyUnitOfWork(session)
+    return _factory
 
 @lru_cache
 def get_indexing_runner()->IndexingRunner:

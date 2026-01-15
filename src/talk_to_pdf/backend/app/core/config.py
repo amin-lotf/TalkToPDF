@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     CHUNKER_KIND: str = "xxx"
     CHUNKER_MAX_CHARS: int = 0
     CHUNKER_OVERLAP: int = 0
+    MAX_TOP_K: int = 0
+    MAX_TOP_N: int = 0
 
 
 settings = Settings()

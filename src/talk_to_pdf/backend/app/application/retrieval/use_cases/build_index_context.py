@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Callable
 from uuid import UUID
 
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO, ContextChunkDTO
@@ -55,17 +55,17 @@ def _is_blank(s: str) -> bool:
 class BuildIndexContextUseCase:
     def __init__(
         self,
-        uow: UnitOfWork,
+        uow_factory: Callable[[], UnitOfWork],
         *,
         embedder_factory: EmbedderFactory,
         reranker: Reranker | None = None,
         progress: ProgressSink | None = None,
         metric: VectorMetric = VectorMetric.COSINE,
         # guardrails to avoid abuse / accidental huge loads
-        max_top_k: int = 50,
-        max_top_n: int = 20,
+        max_top_k: int,
+        max_top_n: int,
     ) -> None:
-        self._uow = uow
+        self._uow_factory = uow_factory
         self._embedder_factory = embedder_factory
         self._reranker = reranker
         self._progress: ProgressSink = progress or NullProgressSink()
@@ -86,14 +86,15 @@ class BuildIndexContextUseCase:
         # -----------------------------------
         # 1) Authz + ready index (single query)
         # -----------------------------------
-        async with self._uow:
-            idx = await self._uow.index_repo.get_by_owner_project_and_id(
+        uow = self._uow_factory()
+        async with uow:
+            idx = await uow.index_repo.get_by_owner_project_and_id(
                 owner_id=dto.owner_id,
                 project_id=dto.project_id,
                 index_id=dto.index_id,
             )
             if not idx:
-                raise IndexNotFoundOrForbidden(index_id=str(dto.index_id))
+                raise IndexNotFoundOrForbidden()
 
             if idx.status != IndexStatus.READY:
                 raise IndexNotReady(index_id=str(dto.index_id))
@@ -138,8 +139,8 @@ class BuildIndexContextUseCase:
             )
         )
 
-        async with self._uow:
-            matches: list[ChunkMatch] = await self._uow.chunk_search_repo.similarity_search(
+        async with uow:
+            matches: list[ChunkMatch] = await uow.chunk_search_repo.similarity_search(
                 query=qvec,
                 top_k=top_k,
                 embed_signature=embed_sig,
@@ -180,8 +181,8 @@ class BuildIndexContextUseCase:
             )
         )
 
-        async with self._uow:
-            chunks: list[Chunk] = await self._uow.chunk_repo.get_many_by_ids_for_index(
+        async with uow:
+            chunks: list[Chunk] = await uow.chunk_repo.get_many_by_ids_for_index(
                 index_id=dto.index_id,
                 ids=match_ids,
             )

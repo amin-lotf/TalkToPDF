@@ -1,12 +1,17 @@
+import logging
+
 from fastapi import FastAPI,Request, status
 from fastapi.responses import JSONResponse
 
 from talk_to_pdf.backend.app.domain.files.errors import FailedToSaveFile
 from talk_to_pdf.backend.app.domain.indexing.errors import FailedToStartIndexing, IndexNotFound, NoIndexesForProject
 from talk_to_pdf.backend.app.domain.projects.errors import ProjectNotFound, FailedToCreateProject
+from talk_to_pdf.backend.app.domain.retrieval.errors import InvalidQuery, IndexNotReady, IndexNotFoundOrForbidden, \
+    InvalidRetrieval
 from talk_to_pdf.backend.app.domain.users import InvalidCredentialsError, InactiveUserError, UserNotFoundError, \
     RegistrationError
 
+logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(InvalidCredentialsError)
@@ -79,3 +84,41 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={"detail": str(exc)},
         )
 
+    @app.exception_handler(InvalidQuery)
+    async def invalid_query(_: Request, exc: InvalidQuery):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(IndexNotReady)
+    async def index_not_ready(_: Request, exc: IndexNotReady):
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(IndexNotFoundOrForbidden)
+    async def index_not_found_or_forbidden(_: Request, exc: IndexNotFoundOrForbidden):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(InvalidRetrieval)
+    async def invalid_retrieval(_: Request, exc: InvalidRetrieval):
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"detail": str(exc)},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception(_: Request, exc: Exception):
+        logger.exception("Unhandled exception", exc_info=exc)
+
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "detail": "Internal server error"
+            },
+        )
