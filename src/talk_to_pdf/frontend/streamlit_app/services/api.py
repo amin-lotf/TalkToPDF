@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, List
+from uuid import UUID
 
 import httpx
 
@@ -260,3 +261,42 @@ class Api:
         )
         resp.raise_for_status()
         return None
+
+    @handle_httpx_errors
+    def query_project(
+            self,
+            access_token: Optional[str],
+            *,
+            project_id: str | UUID,
+            query: str,
+            top_k: int = 10,
+            top_n: int = 5,
+            rerank_timeout_s: float = 0.6,
+    ) -> Dict[str, Any]:
+        """
+        POST /query
+        Body matches QueryRequest:
+          - project_id: UUID
+          - query: str
+          - top_k: int
+          - top_n: int
+          - rerank_timeout_s: float
+
+        Returns ReplyResponse as dict:
+          { "query": "...", "answer": "...", "context": {...} }
+        """
+        payload = {
+            "project_id": str(project_id),
+            "query": query,
+            "top_k": int(top_k),
+            "top_n": int(top_n),
+            "rerank_timeout_s": float(rerank_timeout_s),
+        }
+
+        resp = self._client.post(
+            "/query",
+            headers=self._auth_headers(access_token) or None,
+            json=payload,
+        )
+        resp.raise_for_status()
+        return resp.json()

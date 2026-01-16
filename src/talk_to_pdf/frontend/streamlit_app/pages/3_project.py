@@ -198,6 +198,106 @@ else:
         except ApiError as e:
             st.error(str(e))
 
+# -----------------------------
+# Query + Context inspection (temporary)
+# -----------------------------
+st.divider()
+st.subheader("Ask a question (temporary quality check)")
+
+# Guard: only query when index looks ready
+index_ready = False
+current_index_id = None
+if latest_status:
+    current_index_id = latest_status.get("index_id")
+    s = str(latest_status.get("status") or "").lower()
+    index_ready = s in {"ready", "completed"}
+
+if not index_ready:
+    st.info("Index not ready yet. Finish indexing to test retrieval quality.")
+else:
+    # Input controls (temporary)
+    with st.form("query_form", clear_on_submit=False):
+        q = st.text_input("Question", value=st.session_state.get("last_query", ""), placeholder="Ask about the PDF…")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            top_k = st.number_input("top_k", min_value=1, max_value=50, value=10, step=1)
+        with c2:
+            top_n = st.number_input("top_n", min_value=1, max_value=20, value=5, step=1)
+        with c3:
+            rerank_timeout_s = st.number_input("rerank_timeout_s", min_value=0.0, max_value=20.0, value=0.6, step=0.1)
+
+        submitted = st.form_submit_button("Run query")
+
+    if submitted:
+        if not q.strip():
+            st.warning("Type a question first.")
+        else:
+            st.session_state["last_query"] = q
+            try:
+                t0 = time.perf_counter()
+                reply = api.query_project(
+                    token,
+                    project_id=str(project_id),
+                    query=q.strip(),
+                    top_k=int(top_k),
+                    top_n=int(top_n),
+                    rerank_timeout_s=float(rerank_timeout_s),
+                )
+                dt_ms = (time.perf_counter() - t0) * 1000.0
+                st.caption(f"Latency: {dt_ms:.0f} ms")
+
+            except ApiError as e:
+                st.error(str(e))
+                reply = None
+
+            if reply:
+                # --- Answer ---
+                st.markdown("### Answer")
+                st.write(reply.get("answer", ""))
+
+                # --- Context inspector ---
+                st.markdown("### Context chunks (inspect quality)")
+
+                ctx = reply.get("context") or {}
+                chunks = ctx.get("chunks") or []
+
+                # quick stats
+                st.caption(
+                    f"index_id: {ctx.get('index_id')} | "
+                    f"embed_signature: {ctx.get('embed_signature')} | "
+                    f"metric: {ctx.get('metric')} | "
+                    f"chunks returned: {len(chunks)}"
+                )
+
+                # show chunks one-by-one (best for quality)
+                for i, ch in enumerate(chunks, start=1):
+                    score = ch.get("score")
+                    chunk_id = ch.get("chunk_id")
+                    chunk_index = ch.get("chunk_index")
+
+                    title = f"#{i}  score={score:.4f}  chunk_index={chunk_index}  id={chunk_id}"
+                    with st.expander(title, expanded=(i <= 2)):
+                        # main text
+                        st.write(ch.get("text", ""))
+
+                        # meta & citation (debug)
+                        meta = ch.get("meta")
+                        citation = ch.get("citation")
+
+                        m1, m2 = st.columns(2)
+                        with m1:
+                            st.caption("meta")
+                            st.json(meta if meta is not None else {})
+                        with m2:
+                            st.caption("citation")
+                            st.json(citation if citation is not None else {})
+
+                # raw payload toggle (useful when debugging mapping)
+                with st.expander("Raw reply payload (debug)", expanded=False):
+                    st.json(reply)
+
+
 st.divider()
 st.subheader("Project payload (temporary debug)")
 st.json(project)
+
