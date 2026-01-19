@@ -207,10 +207,12 @@ async def _seed_ready_index_with_chunks_and_embeds(
 # Tests
 # ---------------------------
 
-async def test_build_index_context_blank_query_raises(uow):
+async def test_build_index_context_blank_query_raises(uow_factory):
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0, 0.0, 0.0]),
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
     with pytest.raises(InvalidQuery):
         await uc.execute(
@@ -226,10 +228,12 @@ async def test_build_index_context_blank_query_raises(uow):
         )
 
 
-async def test_build_index_context_index_not_found_or_forbidden_raises(uow):
+async def test_build_index_context_index_not_found_or_forbidden_raises(uow_factory):
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0, 0.0, 0.0]),
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
     with pytest.raises(IndexNotFoundOrForbidden):
         await uc.execute(
@@ -245,7 +249,7 @@ async def test_build_index_context_index_not_found_or_forbidden_raises(uow):
         )
 
 
-async def test_build_index_context_index_not_ready_raises(session, uow, pdf_bytes, monkeypatch, tmp_path: Path):
+async def test_build_index_context_index_not_ready_raises(session, uow, uow_factory,pdf_bytes, monkeypatch, tmp_path: Path):
     embed_cfg = EmbedConfig(provider="openai", model="text-embedding-3-small", batch_size=16, dimensions=8)
 
     # seed project + index but keep it NOT READY (no worker.store_embeds)
@@ -286,8 +290,10 @@ async def test_build_index_context_index_not_ready_raises(session, uow, pdf_byte
         index_id = idx.id
 
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0] + [0.0] * (embed_cfg.dimensions - 1)),
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
 
     with pytest.raises(IndexNotReady):
@@ -305,7 +311,7 @@ async def test_build_index_context_index_not_ready_raises(session, uow, pdf_byte
 
 
 async def test_build_index_context_happy_path_returns_top_n_and_embed_signature(
-    session, uow, pdf_bytes, monkeypatch, tmp_path: Path
+    session, uow,uow_factory, pdf_bytes, monkeypatch, tmp_path: Path
 ):
     embed_cfg = EmbedConfig(provider="openai", model="text-embedding-3-small", batch_size=16, dimensions=8)
 
@@ -323,9 +329,11 @@ async def test_build_index_context_happy_path_returns_top_n_and_embed_signature(
     query_vec = [1.0] + [0.0] * (embed_cfg.dimensions - 1)
 
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         metric=VectorMetric.COSINE,
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
 
     out = await uc.execute(
@@ -357,7 +365,7 @@ async def test_build_index_context_happy_path_returns_top_n_and_embed_signature(
 
 
 async def test_build_index_context_rerank_reorders_but_keeps_similarity_scores(
-    session, uow, pdf_bytes, monkeypatch, tmp_path: Path
+    session, uow,uow_factory, pdf_bytes, monkeypatch, tmp_path: Path
 ):
     embed_cfg = EmbedConfig(provider="openai", model="text-embedding-3-small", batch_size=16, dimensions=8)
     owner_id, project_id, _, index_id = await _seed_ready_index_with_chunks_and_embeds(
@@ -372,10 +380,12 @@ async def test_build_index_context_rerank_reorders_but_keeps_similarity_scores(
     query_vec = [1.0] + [0.0] * (embed_cfg.dimensions - 1)
 
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         reranker=ReverseReranker(),
         metric=VectorMetric.COSINE,
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
 
     out = await uc.execute(
@@ -403,7 +413,7 @@ async def test_build_index_context_rerank_reorders_but_keeps_similarity_scores(
 
 
 async def test_build_index_context_rerank_timeout_falls_back_to_similarity_order(
-    session, uow, pdf_bytes, monkeypatch, tmp_path: Path
+    session, uow,uow_factory, pdf_bytes, monkeypatch, tmp_path: Path
 ):
     embed_cfg = EmbedConfig(provider="openai", model="text-embedding-3-small", batch_size=16, dimensions=8)
     owner_id, project_id, _, index_id = await _seed_ready_index_with_chunks_and_embeds(
@@ -418,10 +428,12 @@ async def test_build_index_context_rerank_timeout_falls_back_to_similarity_order
     query_vec = [1.0] + [0.0] * (embed_cfg.dimensions - 1)
 
     uc = BuildIndexContextUseCase(
-        uow=uow,
+        uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         reranker=SlowReranker(delay_s=0.5),
         metric=VectorMetric.COSINE,
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N,
     )
 
     out = await uc.execute(
@@ -440,7 +452,7 @@ async def test_build_index_context_rerank_timeout_falls_back_to_similarity_order
     assert [c.chunk_index for c in out.chunks[:3]] == [0, 1, 2]
 
 
-async def test_build_index_context_embedder_returns_empty_vector_raises_invalid_retrieval(uow):
+async def test_build_index_context_embedder_returns_empty_vector_raises_invalid_retrieval(uow,uow_factory):
     @dataclass
     class EmptyEmbedder:
         async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -453,7 +465,12 @@ async def test_build_index_context_embedder_returns_empty_vector_raises_invalid_
 
     # It will fail before needing DB (after index lookup) — so pass random IDs and expect not-found first.
     # To hit InvalidRetrieval precisely, you'd need a real READY index. This is the minimal “unit-ish” integration.
-    uc = BuildIndexContextUseCase(uow=uow, embedder_factory=EmptyFactory())
+    uc = BuildIndexContextUseCase(
+        uow_factory=uow_factory,
+        embedder_factory=EmptyFactory(),
+        max_top_k=settings.MAX_TOP_K,
+        max_top_n=settings.MAX_TOP_N
+    )
     with pytest.raises(IndexNotFoundOrForbidden):
         await uc.execute(
             SearchInputDTO(

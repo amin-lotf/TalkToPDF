@@ -1,13 +1,16 @@
 import asyncio
 from pathlib import Path
+from typing import Annotated
 
 import pytest_asyncio
 from alembic import command
 from alembic.config import Config
+from fastapi import Depends
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from talk_to_pdf.backend.app.core.config import settings
+from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 
 
@@ -64,6 +67,13 @@ async def session(db_engine) -> AsyncSession:
 @pytest_asyncio.fixture
 async def uow(session):
     return SqlAlchemyUnitOfWork(session)
+
+
+@pytest_asyncio.fixture
+def uow_factory(session):
+    def _factory() -> UnitOfWork:
+        return SqlAlchemyUnitOfWork(session)
+    return _factory
 
 @pytest_asyncio.fixture
 def pdf_bytes() -> bytes:

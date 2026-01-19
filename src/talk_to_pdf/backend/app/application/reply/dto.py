@@ -15,7 +15,7 @@ from talk_to_pdf.backend.app.domain.reply import ChatRole
 class CreateChatInputDTO:
     owner_id: UUID
     project_id: UUID
-    title: str | None = None
+    title: str
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace, field
 from datetime import datetime
+from typing import Optional
 from uuid import UUID, uuid4
 
 from talk_to_pdf.backend.app.domain.common import utcnow
@@ -23,10 +24,12 @@ class Chat:
     project_id: UUID
     title: str
     id: UUID = field(default_factory=uuid4)
-    updated_at: datetime = field(default_factory=uuid4)
+    updated_at: Optional[datetime] = field(default=None)
     created_at: datetime = field(default_factory=utcnow)
 
-
+    def __post_init__(self):
+        if self.updated_at is None:
+            object.__setattr__(self, "updated_at", self.created_at)
 
 
     def rename(self, *, title: str, updated_at: datetime | None = None) -> "Chat":
