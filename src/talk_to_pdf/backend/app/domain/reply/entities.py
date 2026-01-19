@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, replace, field
+from datetime import datetime
+from uuid import UUID, uuid4
+
+from talk_to_pdf.backend.app.domain.common import utcnow
+from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+
+
+@dataclass(frozen=True, slots=True)
+class ChatMessage:
+    chat_id: UUID
+    role: ChatRole
+    content: str
+    id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=utcnow)
+
+
+@dataclass(frozen=True, slots=True)
+class Chat:
+    owner_id: UUID
+    project_id: UUID
+    title: str
+    id: UUID = field(default_factory=uuid4)
+    updated_at: datetime = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=utcnow)
+
+
+
+
+    def rename(self, *, title: str, updated_at: datetime | None = None) -> "Chat":
+        safe_title = (title or "").strip()
+        if not safe_title:
+            raise ValueError("Chat.title cannot be empty")
+        return replace(self, title=safe_title, updated_at=updated_at or utcnow())
+
+    def touch(self, *, updated_at: datetime | None = None) -> "Chat":
+        return replace(self, updated_at=updated_at or utcnow())

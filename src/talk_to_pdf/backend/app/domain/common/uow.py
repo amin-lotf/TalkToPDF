@@ -4,6 +4,7 @@ from typing import Protocol, Optional
 from talk_to_pdf.backend.app.domain.indexing.repositories import DocumentIndexRepository, ChunkRepository, \
     ChunkEmbeddingRepository
 from talk_to_pdf.backend.app.domain.projects import ProjectRepository
+from talk_to_pdf.backend.app.domain.reply.repositories import ChatRepository, ChatMessageRepository
 from talk_to_pdf.backend.app.domain.retrieval.repositories import ChunkSearchRepository
 from talk_to_pdf.backend.app.domain.users.repositories import UserRepository
 
@@ -15,6 +16,8 @@ class UnitOfWork(Protocol):
     chunk_repo : ChunkRepository
     chunk_embedding_repo: ChunkEmbeddingRepository
     chunk_search_repo: ChunkSearchRepository
+    chat_repo: ChatRepository
+    chat_message_repo: ChatMessageRepository
     async def rollback(self) -> None: ...
 
     async def __aenter__(self) -> "UnitOfWork": ...

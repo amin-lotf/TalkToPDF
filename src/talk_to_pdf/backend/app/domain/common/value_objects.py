@@ -67,3 +67,57 @@ class EmbedConfig:
 
     def signature(self) -> str:
         return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class RerankerConfig:
+    provider: str           # "openai", "noop", "cross_encoder"
+    model: str              # "gpt-4o-mini", "bge-reranker"
+    top_n: int
+    temperature: float = 0.0
+    max_chars_per_chunk: int = 900
+
+    def to_dict(self) -> dict:
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "top_n": int(self.top_n),
+            "temperature": float(self.temperature),
+            "max_chars_per_chunk": int(self.max_chars_per_chunk),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "RerankerConfig":
+        allowed = {
+            "provider",
+            "model",
+            "top_n",
+            "temperature",
+            "max_chars_per_chunk",
+        }
+        unknown = set(d.keys()) - allowed
+        if unknown:
+            raise ValueError(f"Unknown keys in reranker_config: {sorted(unknown)}")
+
+        return cls(
+            provider=str(d["provider"]),
+            model=str(d["model"]),
+            top_n=int(d["top_n"]),
+            temperature=float(d.get("temperature", 0.0)),
+            max_chars_per_chunk=int(d.get("max_chars_per_chunk", 900)),
+        )
+
+    def canonical_json(self) -> str:
+        return json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+
+    def signature(self) -> str:
+        """
+        Optional.
+        Useful for debugging / observability, NOT for indexing.
+        """
+        return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
