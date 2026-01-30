@@ -5,6 +5,10 @@ from fastapi import Depends
 
 from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder, EmbedderFactory
 from talk_to_pdf.backend.app.application.reply.use_cases.stream_reply import StreamReplyUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.create_chat import CreateChatUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.get_chat import GetChatUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.list_chats import ListChatsUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.delete_chat import DeleteChatUseCase
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.core.deps import get_uow, get_uow_factory
@@ -38,3 +42,27 @@ def get_stream_reply_use_case(
 
 ) -> StreamReplyUseCase:
     return StreamReplyUseCase(uow_factory=uow_factory, ctx_builder_uc=context_builder)
+
+
+def get_create_chat_use_case(
+    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
+) -> CreateChatUseCase:
+    return CreateChatUseCase(uow_factory=uow_factory)
+
+
+def get_get_chat_use_case(
+    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
+) -> GetChatUseCase:
+    return GetChatUseCase(uow_factory=uow_factory)
+
+
+def get_list_chats_use_case(
+    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
+) -> ListChatsUseCase:
+    return ListChatsUseCase(uow_factory=uow_factory)
+
+
+def get_delete_chat_use_case(
+    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
+) -> DeleteChatUseCase:
+    return DeleteChatUseCase(uow_factory=uow_factory)

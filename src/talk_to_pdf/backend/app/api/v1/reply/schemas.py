@@ -37,3 +37,24 @@ class ReplyResponse(BaseModel):
     query: str
     answer: str
     context: ContextPackResponse
+
+
+# -------------------------
+# Chat schemas
+# -------------------------
+class CreateChatRequest(BaseModel):
+    project_id: UUID
+    title: str = Field(min_length=1, max_length=200)
+
+
+class ChatResponse(BaseModel):
+    id: UUID
+    owner_id: UUID
+    project_id: UUID
+    title: str
+    created_at: str
+    updated_at: str
+
+
+class ListChatsResponse(BaseModel):
+    items: list[ChatResponse]

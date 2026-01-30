@@ -91,6 +91,90 @@ page_frame(project.get("name", "Project"), key_prefix="project")
 st.caption(f"ID: {project.get('id')}")
 
 # -----------------------------
+# Sidebar: Chat Management
+# -----------------------------
+def _sidebar_chats() -> None:
+    """Display chat creation and list in sidebar (only when index is ready)"""
+    # Check if index is ready
+    index_ready = False
+    if latest_status:
+        s = str(latest_status.get("status") or "").lower()
+        index_ready = s in {"ready", "completed"}
+
+    if not index_ready:
+        st.sidebar.info("🔄 Finish indexing to create chats")
+        return
+
+    st.sidebar.markdown("### 💬 Chats")
+
+    # Create chat button with popover
+    with st.sidebar.popover("➕ New Chat", use_container_width=True):
+        with st.form("new_chat_form", clear_on_submit=True):
+            chat_title = st.text_input("Chat title", placeholder="e.g., Questions about chapter 1")
+            create_btn = st.form_submit_button("Create", use_container_width=True)
+
+        if create_btn:
+            if not chat_title.strip():
+                st.error("Chat title is required.")
+            else:
+                try:
+                    new_chat = api.create_chat(token, project_id=str(project_id), title=chat_title.strip())
+                    st.session_state["selected_chat_id"] = new_chat.get("id")
+                    st.success(f"Chat created!")
+                    st.rerun()
+                except ApiError as e:
+                    st.error(str(e))
+
+    st.sidebar.divider()
+
+    # List chats
+    try:
+        chats_response = api.list_chats(token, project_id=str(project_id))
+        chats = chats_response.get("items", [])
+    except ApiError as e:
+        st.sidebar.error(f"Failed to load chats: {e}")
+        return
+
+    if not chats:
+        st.sidebar.caption("No chats yet.")
+        return
+
+    selected_chat_id = st.session_state.get("selected_chat_id")
+
+    for chat in chats:
+        chat_id = str(chat.get("id"))
+        chat_title_text = chat.get("title", "Untitled")
+        is_selected = (selected_chat_id == chat_id)
+
+        row = st.sidebar.columns([8, 1], gap="small")
+
+        with row[0]:
+            btn_icon = "🔵" if is_selected else "💬"
+            if st.button(f"{btn_icon} {chat_title_text}", use_container_width=True, key=f"open_chat_{chat_id}"):
+                st.session_state["selected_chat_id"] = chat_id
+                st.rerun()
+
+        with row[1]:
+            with st.popover("⋯", use_container_width=True):
+                st.caption(chat_title_text)
+
+                # Delete (confirm)
+                st.warning("Delete is permanent.")
+                confirm = st.checkbox("I understand", key=f"del_chat_confirm_{chat_id}")
+                if st.button("Delete", use_container_width=True, key=f"delete_chat_{chat_id}", disabled=not confirm):
+                    try:
+                        api.delete_chat(token, chat_id=chat_id)
+
+                        # Clear selection if this chat was selected
+                        if st.session_state.get("selected_chat_id") == chat_id:
+                            st.session_state.pop("selected_chat_id", None)
+
+                        st.success("Chat deleted.")
+                        st.rerun()
+                    except ApiError as e:
+                        st.error(str(e))
+
+# -----------------------------
 # Indexing (auto-start + polling)
 # -----------------------------
 auto_start = bool(st.session_state.get("auto_start_indexing"))
@@ -198,24 +282,30 @@ else:
         except ApiError as e:
             st.error(str(e))
 
-# -----------------------------
-# Query + Context inspection (temporary)
-# -----------------------------
-st.divider()
-st.subheader("Ask a question (temporary quality check)")
+# Call sidebar function to display chats
+_sidebar_chats()
 
-# Guard: only query when index looks ready
+# -----------------------------
+# Main Content: Selected Chat
+# -----------------------------
+selected_chat_id = st.session_state.get("selected_chat_id")
+
+# Guard: check if index is ready
 index_ready = False
-current_index_id = None
 if latest_status:
-    current_index_id = latest_status.get("index_id")
     s = str(latest_status.get("status") or "").lower()
     index_ready = s in {"ready", "completed"}
 
 if not index_ready:
-    st.info("Index not ready yet. Finish indexing to test retrieval quality.")
+    st.info("💡 Finish indexing to create and use chats.")
+elif not selected_chat_id:
+    st.info("💡 Select or create a chat from the sidebar to start asking questions.")
 else:
-    # Input controls (temporary)
+    # Show the selected chat
+    st.divider()
+    st.subheader("💬 Ask a Question")
+
+    # Input controls
     with st.form("query_form", clear_on_submit=False):
         q = st.text_input("Question", value=st.session_state.get("last_query", ""), placeholder="Ask about the PDF…")
         c1, c2, c3 = st.columns(3)

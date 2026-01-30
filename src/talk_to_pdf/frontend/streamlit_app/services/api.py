@@ -300,3 +300,87 @@ class Api:
         )
         resp.raise_for_status()
         return resp.json()
+
+    # ---------- Chat endpoints ----------
+
+    @handle_httpx_errors
+    def create_chat(
+        self,
+        access_token: Optional[str],
+        *,
+        project_id: str | UUID,
+        title: str,
+    ) -> Dict[str, Any]:
+        """
+        POST /chats
+        Body: { "project_id": UUID, "title": str }
+        Returns ChatResponse as dict
+        """
+        payload = {
+            "project_id": str(project_id),
+            "title": title,
+        }
+        resp = self._client.post(
+            "/chats",
+            headers=self._auth_headers(access_token) or None,
+            json=payload,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def list_chats(
+        self,
+        access_token: Optional[str],
+        *,
+        project_id: str | UUID,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        GET /projects/{project_id}/chats?limit=X&offset=Y
+        Returns ListChatsResponse as dict: { "items": [...] }
+        """
+        resp = self._client.get(
+            f"/projects/{project_id}/chats",
+            headers=self._auth_headers(access_token) or None,
+            params={"limit": limit, "offset": offset},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def get_chat(
+        self,
+        access_token: Optional[str],
+        *,
+        chat_id: str | UUID,
+    ) -> Dict[str, Any]:
+        """
+        GET /chats/{chat_id}
+        Returns ChatResponse as dict
+        """
+        resp = self._client.get(
+            f"/chats/{chat_id}",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    @handle_httpx_errors
+    def delete_chat(
+        self,
+        access_token: Optional[str],
+        *,
+        chat_id: str | UUID,
+    ) -> None:
+        """
+        DELETE /chats/{chat_id}
+        Returns None (204 status)
+        """
+        resp = self._client.delete(
+            f"/chats/{chat_id}",
+            headers=self._auth_headers(access_token) or None,
+        )
+        resp.raise_for_status()
+        return None
