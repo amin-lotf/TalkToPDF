@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO
+from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO
 from talk_to_pdf.backend.app.application.reply.dto import ChatDTO, ReplyInputDTO, MessageDTO, CreateChatInputDTO, \
-    CreateMessageInputDTO
+    CreateMessageInputDTO, ReplyOutputDTO
+from talk_to_pdf.backend.app.domain.reply import ChatRole
 from talk_to_pdf.backend.app.domain.reply.entities import Chat, ChatMessage  # since you put both in entities.py
 
 
@@ -53,4 +54,20 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
         created_at=msg.created_at,
     )
 
+
+def create_create_chat_message_input_dto(reply_input_dto:ReplyInputDTO,role:ChatRole,content:str)->CreateMessageInputDTO:
+    return CreateMessageInputDTO(
+        owner_id=reply_input_dto.owner_id,
+        chat_id=reply_input_dto.chat_id,
+        role=role,
+        content=content,
+    )
+
+def create_reply_output_dto(dto: ReplyInputDTO, answer_text: str, context: ContextPackDTO) -> ReplyOutputDTO:
+    return ReplyOutputDTO(
+            chat_id=dto.chat_id,
+            query=dto.query,
+            context=context,
+            answer=answer_text,
+        )
 
