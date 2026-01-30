@@ -4,7 +4,9 @@ from datetime import datetime
 from uuid import uuid4
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import DateTime, ForeignKey, String, Index, Text, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
 
 from talk_to_pdf.backend.app.domain.reply import ChatRole
 from talk_to_pdf.backend.app.infrastructure.db import Base
@@ -107,6 +109,11 @@ class ChatMessageModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+    )
+
+    citations: Mapped[Optional[dict]] = mapped_column(
+        JSONB,
+        nullable=True,
     )
 
     chat: Mapped["ChatModel"] = relationship(

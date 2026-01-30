@@ -55,6 +55,7 @@ class MessageDTO:
     role: ChatRole
     content: str
     created_at: datetime
+    citations: dict | None = None
 
 @dataclass(frozen=True, slots=True)
 class CreateMessageInputDTO:
@@ -62,6 +63,11 @@ class CreateMessageInputDTO:
     chat_id: UUID
     role: ChatRole
     content: str
+    context: ContextPackDTO | None = None
+    top_k: int | None = None
+    rerank_signature: str | None = None
+    prompt_version: str | None = None
+    model: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

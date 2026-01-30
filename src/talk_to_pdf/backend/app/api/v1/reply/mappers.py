@@ -132,6 +132,7 @@ def message_dto_to_response(dto: MessageDTO) -> MessageResponse:
         role=dto.role.value if hasattr(dto.role, 'value') else str(dto.role),
         content=dto.content,
         created_at=dto.created_at.isoformat(),
+        citations=dto.citations,
     )
 
 

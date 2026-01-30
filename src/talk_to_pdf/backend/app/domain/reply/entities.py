@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from talk_to_pdf.backend.app.domain.common import utcnow
 from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +17,7 @@ class ChatMessage:
     content: str
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=utcnow)
+    citations: ChatMessageCitations | None = None
 
 
 @dataclass(frozen=True, slots=True)

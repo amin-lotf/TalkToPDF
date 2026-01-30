@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Callable
 
 from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder
-from talk_to_pdf.backend.app.application.reply.dto import ReplyInputDTO, ReplyOutputDTO
-from talk_to_pdf.backend.app.application.reply.mappers import build_search_input_dto, \
-    create_create_chat_message_input_dto, create_reply_output_dto
+from talk_to_pdf.backend.app.application.reply.dto import ReplyInputDTO, ReplyOutputDTO, CreateMessageInputDTO
+from talk_to_pdf.backend.app.application.reply.mappers import build_search_input_dto, create_reply_output_dto
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.retrieval.errors import IndexNotFoundOrForbidden
@@ -44,8 +43,9 @@ class StreamReplyUseCase:
 
         # 2) Persist user message (through use case)
         await self._create_msg_uc.execute(
-            create_create_chat_message_input_dto(
-                reply_input_dto=dto,
+            CreateMessageInputDTO(
+                owner_id=dto.owner_id,
+                chat_id=dto.chat_id,
                 role=ChatRole.USER,
                 content=dto.query,
             )
@@ -57,15 +57,24 @@ class StreamReplyUseCase:
 
         # 4) LLM call (stub for now)
         answer_text = "LLM response"
+        model_name = "gpt-4"
+        prompt_version = "v1"
 
-        # 5) Persist assistant message (through use case)
+        # 5) Persist assistant message with citations (CreateChatMessageUseCase handles citation creation)
         await self._create_msg_uc.execute(
-            create_create_chat_message_input_dto(
-                reply_input_dto=dto,
+            CreateMessageInputDTO(
+                owner_id=dto.owner_id,
+                chat_id=dto.chat_id,
                 role=ChatRole.ASSISTANT,
                 content=answer_text,
+                context=context,
+                top_k=dto.top_k,
+                rerank_signature=None,
+                prompt_version=prompt_version,
+                model=model_name,
             )
         )
+
         return create_reply_output_dto(
             dto=dto,
             answer_text=answer_text,

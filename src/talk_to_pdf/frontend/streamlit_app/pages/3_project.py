@@ -351,47 +351,58 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    # Assistant message with expandable context
+                    # Assistant message with expandable citations
                     st.markdown(f"""
                     <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
                         <strong>🤖 Assistant:</strong><br>{msg['content']}
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # Show context and metadata in an expander (collapsed by default)
-                    context_data = msg.get("context")
-                    if context_data:
-                        with st.expander("📚 View Context & Metadata", expanded=False):
-                            st.caption("**Retrieved Context:**")
-                            chunks = context_data.get("chunks", [])
+                    # Show citations in a compact expander (collapsed by default)
+                    citations_data = msg.get("citations")
+                    if citations_data:
+                        chunks = citations_data.get("chunks", [])
+                        num_sources = len(chunks)
+
+                        with st.expander(f"📎 {num_sources} Source{'s' if num_sources != 1 else ''}", expanded=False):
+                            # Display metadata header
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.caption(f"**Model:** {citations_data.get('model', 'N/A')}")
+                            with col2:
+                                st.caption(f"**Top-k:** {citations_data.get('top_k', 'N/A')}")
+                            with col3:
+                                st.caption(f"**Metric:** {citations_data.get('metric', 'N/A')}")
+
+                            st.divider()
+
+                            # Display cited chunks
                             if chunks:
                                 for idx, chunk in enumerate(chunks, 1):
-                                    st.markdown(f"**Chunk {idx}** (score: {chunk.get('score', 0):.4f})")
-                                    st.text(chunk.get("text", ""))
+                                    citation = chunk.get("citation", {})
+                                    score = chunk.get("score")
 
-                                    # Show metadata if available
-                                    meta = chunk.get("meta")
-                                    if meta:
-                                        st.json(meta, expanded=False)
+                                    # Header with score
+                                    score_text = f" (score: {score:.3f})" if score is not None else ""
+                                    st.markdown(f"**Source {idx}**{score_text}")
 
-                                    # Show citation if available
-                                    citation = chunk.get("citation")
+                                    # Display all citation metadata dynamically
                                     if citation:
-                                        st.caption(f"📄 Citation: {citation}")
+                                        # Build metadata display from all keys in citation dict
+                                        metadata_items = []
+                                        for key, value in citation.items():
+                                            # Format the key nicely (e.g., char_start -> Char Start)
+                                            formatted_key = key.replace('_', ' ').title()
+                                            metadata_items.append(f"**{formatted_key}:** {value}")
 
-                                    st.divider()
+                                        if metadata_items:
+                                            # Display metadata in a clean format
+                                            st.caption(" • ".join(metadata_items))
+
+                                    if idx < len(chunks):
+                                        st.divider()
                             else:
-                                st.caption("No context chunks available.")
-
-                            # Show query metadata
-                            st.caption("**Query Metadata:**")
-                            meta_info = {
-                                "Query": context_data.get("query"),
-                                "Index ID": context_data.get("index_id"),
-                                "Embedding": context_data.get("embed_signature"),
-                                "Metric": context_data.get("metric"),
-                            }
-                            st.json(meta_info, expanded=False)
+                                st.caption("No citations available.")
 
     # Lower part: Input area (fixed at bottom)
     st.divider()

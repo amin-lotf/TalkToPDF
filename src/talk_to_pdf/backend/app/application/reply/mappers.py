@@ -7,6 +7,7 @@ from talk_to_pdf.backend.app.application.reply.dto import ChatDTO, ReplyInputDTO
     CreateMessageInputDTO, ReplyOutputDTO
 from talk_to_pdf.backend.app.domain.reply import ChatRole
 from talk_to_pdf.backend.app.domain.reply.entities import Chat, ChatMessage  # since you put both in entities.py
+from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations, CitedChunk
 
 
 def build_search_input_dto(*, dto: ReplyInputDTO, index_id: UUID) -> SearchInputDTO:
@@ -39,19 +40,52 @@ def create_chat_domain(chat_input_dto: CreateChatInputDTO) -> Chat:
     )
 
 def create_chat_message_domain(create_dto: CreateMessageInputDTO) -> ChatMessage:
+    citations = None
+    # Only create citations for assistant messages with context
+    if create_dto.context and create_dto.role == ChatRole.ASSISTANT:
+        citations = create_citations_from_context(
+            context=create_dto.context,
+            top_k=create_dto.top_k or 10,
+            rerank_signature=create_dto.rerank_signature,
+            prompt_version=create_dto.prompt_version,
+            model=create_dto.model,
+        )
+
     return ChatMessage(
         chat_id=create_dto.chat_id,
         role=create_dto.role,
         content=create_dto.content,
+        citations=citations,
     )
 
 def message_to_dto(msg: ChatMessage) -> MessageDTO:
+    citations_dict = None
+    if msg.citations:
+        citations_dict = {
+            "index_id": str(msg.citations.index_id),
+            "embed_signature": msg.citations.embed_signature,
+            "metric": msg.citations.metric if isinstance(msg.citations.metric, str) else msg.citations.metric.value,
+            "chunks": [
+                {
+                    "chunk_id": str(chunk.chunk_id),
+                    "score": chunk.score,
+                    "citation": chunk.citation,
+                }
+                for chunk in msg.citations.chunks
+            ],
+            "top_k": msg.citations.top_k,
+            "rerank_signature": msg.citations.rerank_signature,
+            "prompt_version": msg.citations.prompt_version,
+            "model": msg.citations.model,
+        }
+
     return MessageDTO(
         id=msg.id,
         chat_id=msg.chat_id,
         role=msg.role,
         content=msg.content,
         created_at=msg.created_at,
+        citations=citations_dict,
     )
 
 
@@ -70,4 +104,31 @@ def create_reply_output_dto(dto: ReplyInputDTO, answer_text: str, context: Conte
             context=context,
             answer=answer_text,
         )
+
+
+def create_citations_from_context(
+    context: ContextPackDTO,
+    top_k: int,
+    rerank_signature: str | None = None,
+    prompt_version: str | None = None,
+    model: str | None = None,
+) -> ChatMessageCitations:
+    """Create ChatMessageCitations from ContextPackDTO for assistant messages."""
+    return ChatMessageCitations(
+        index_id=context.index_id,
+        embed_signature=context.embed_signature,
+        metric=context.metric,
+        chunks=[
+            CitedChunk(
+                chunk_id=chunk.chunk_id,
+                score=chunk.score,
+                citation=chunk.citation or {},
+            )
+            for chunk in context.chunks
+        ],
+        top_k=top_k,
+        rerank_signature=rerank_signature,
+        prompt_version=prompt_version,
+        model=model,
+    )
 
