@@ -77,6 +77,20 @@ class SqlAlchemyDocumentIndexRepository:
         m = (await self._session.execute(stmt)).scalar_one_or_none()
         return index_model_to_domain(m) if m else None
 
+    async def get_latest_ready_by_project_and_owner_and_signature(self, *, project_id: UUID, owner_id: UUID,
+                                                                  embed_signature: str) -> DocumentIndex | None:
+        stmt = (
+            select(DocumentIndexModel)
+            .join(ProjectModel, ProjectModel.id == DocumentIndexModel.project_id)
+            .where(DocumentIndexModel.project_id == project_id, ProjectModel.owner_id == owner_id)
+            .where(DocumentIndexModel.embed_signature == embed_signature)
+            .where(DocumentIndexModel.status == IndexStatus.READY)
+            .order_by(desc(DocumentIndexModel.created_at))
+            .limit(1)
+        )
+        m = (await self._session.execute(stmt)).scalar_one_or_none()
+        return index_model_to_domain(m) if m else None
+
     async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,
                                                          embed_signature: str) -> DocumentIndex | None:
         stmt = (

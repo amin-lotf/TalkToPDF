@@ -17,8 +17,15 @@ class GetLatestIndexStatusUseCase:
 
     async def execute(self, dto: GetLatestIndexStatusInputDTO) -> IndexStatusDTO:
         async with self._uow:
-            index = await self._uow.index_repo.get_latest_active_by_project_and_owner_and_signature(
-                project_id=dto.project_id, owner_id=dto.owner_id,embed_signature=self._embed_config.signature())
+            # First try to get a ready index (completed successfully) with matching embed signature
+            index = await self._uow.index_repo.get_latest_ready_by_project_and_owner_and_signature(
+                project_id=dto.project_id, owner_id=dto.owner_id, embed_signature=self._embed_config.signature())
+
+            # If no ready index, check for active (in-progress) indexes with matching embed signature
+            if not index:
+                index = await self._uow.index_repo.get_latest_active_by_project_and_owner_and_signature(
+                    project_id=dto.project_id, owner_id=dto.owner_id, embed_signature=self._embed_config.signature())
+
             if not index:
                 raise NoIndexesForProject(project_id=str(dto.project_id))
             return to_index_status_dto(index)

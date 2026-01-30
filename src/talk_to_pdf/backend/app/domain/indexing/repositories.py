@@ -30,6 +30,10 @@ class DocumentIndexRepository(Protocol):
     async def get_latest_ready_by_project_and_owner(self, *, project_id: UUID, owner_id: UUID) -> DocumentIndex | None:
         ...
 
+    async def get_latest_ready_by_project_and_owner_and_signature(self, *, project_id: UUID, owner_id: UUID,
+                                                                  embed_signature: str) -> DocumentIndex | None:
+        ...
+
     async def get_latest_active_by_project_and_signature(self, *, project_id: UUID,
                                                          embed_signature: str) -> DocumentIndex | None:
         ...
