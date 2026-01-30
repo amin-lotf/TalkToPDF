@@ -317,9 +317,20 @@ if not index_ready:
 elif not selected_chat_id:
     st.info("💡 Select or create a chat from the sidebar to start asking questions.")
 else:
-    # Initialize chat history in session state
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = []
+    # Load messages from backend when chat is selected
+    # Use a key that changes when chat_id changes to trigger reload
+    chat_key = f"chat_messages_{selected_chat_id}"
+
+    # Load messages if not already loaded for this chat
+    if chat_key not in st.session_state:
+        try:
+            messages_response = api.get_chat_messages(token, chat_id=selected_chat_id, limit=100)
+            st.session_state[chat_key] = messages_response.get("items", [])
+        except ApiError as e:
+            st.error(f"Failed to load messages: {e}")
+            st.session_state[chat_key] = []
+
+    messages = st.session_state[chat_key]
 
     # Show the selected chat with chat-style interface
     # Upper part: Conversation history
@@ -329,10 +340,10 @@ else:
     chat_container = st.container(height=500)
 
     with chat_container:
-        if not st.session_state["chat_history"]:
+        if not messages:
             st.caption("No messages yet. Start by asking a question below.")
         else:
-            for i, msg in enumerate(st.session_state["chat_history"]):
+            for i, msg in enumerate(messages):
                 if msg["role"] == "user":
                     st.markdown(f"""
                     <div style='background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0;'>
@@ -340,11 +351,47 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
                 else:
+                    # Assistant message with expandable context
                     st.markdown(f"""
                     <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
                         <strong>🤖 Assistant:</strong><br>{msg['content']}
                     </div>
                     """, unsafe_allow_html=True)
+
+                    # Show context and metadata in an expander (collapsed by default)
+                    context_data = msg.get("context")
+                    if context_data:
+                        with st.expander("📚 View Context & Metadata", expanded=False):
+                            st.caption("**Retrieved Context:**")
+                            chunks = context_data.get("chunks", [])
+                            if chunks:
+                                for idx, chunk in enumerate(chunks, 1):
+                                    st.markdown(f"**Chunk {idx}** (score: {chunk.get('score', 0):.4f})")
+                                    st.text(chunk.get("text", ""))
+
+                                    # Show metadata if available
+                                    meta = chunk.get("meta")
+                                    if meta:
+                                        st.json(meta, expanded=False)
+
+                                    # Show citation if available
+                                    citation = chunk.get("citation")
+                                    if citation:
+                                        st.caption(f"📄 Citation: {citation}")
+
+                                    st.divider()
+                            else:
+                                st.caption("No context chunks available.")
+
+                            # Show query metadata
+                            st.caption("**Query Metadata:**")
+                            meta_info = {
+                                "Query": context_data.get("query"),
+                                "Index ID": context_data.get("index_id"),
+                                "Embedding": context_data.get("embed_signature"),
+                                "Metric": context_data.get("metric"),
+                            }
+                            st.json(meta_info, expanded=False)
 
     # Lower part: Input area (fixed at bottom)
     st.divider()
@@ -369,14 +416,12 @@ else:
         if not q.strip():
             st.warning("Type a question first.")
         else:
-            # Add user message to chat history
-            st.session_state["chat_history"].append({"role": "user", "content": q.strip()})
-
             try:
                 t0 = time.perf_counter()
                 reply = api.query_project(
                     token,
                     project_id=str(project_id),
+                    chat_id=str(selected_chat_id),
                     query=q.strip(),
                     top_k=int(top_k),
                     top_n=int(top_n),
@@ -384,14 +429,13 @@ else:
                 )
                 dt_ms = (time.perf_counter() - t0) * 1000.0
 
-                # Add assistant message to chat history
-                answer = reply.get("answer", "")
-                st.session_state["chat_history"].append({"role": "assistant", "content": answer})
+                # Clear the cached messages to reload from backend
+                if chat_key in st.session_state:
+                    st.session_state.pop(chat_key)
 
                 st.success(f"✅ Response received (Latency: {dt_ms:.0f} ms)")
                 st.rerun()
 
             except ApiError as e:
                 st.error(str(e))
-                st.session_state["chat_history"].pop()  # Remove user message if failed
 

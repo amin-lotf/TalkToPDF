@@ -268,6 +268,7 @@ class Api:
             access_token: Optional[str],
             *,
             project_id: str | UUID,
+            chat_id: str | UUID,
             query: str,
             top_k: int = 10,
             top_n: int = 5,
@@ -277,6 +278,7 @@ class Api:
         POST /query
         Body matches QueryRequest:
           - project_id: UUID
+          - chat_id: UUID
           - query: str
           - top_k: int
           - top_n: int
@@ -287,6 +289,7 @@ class Api:
         """
         payload = {
             "project_id": str(project_id),
+            "chat_id": str(chat_id),
             "query": query,
             "top_k": int(top_k),
             "top_n": int(top_n),
@@ -384,3 +387,23 @@ class Api:
         )
         resp.raise_for_status()
         return None
+
+    @handle_httpx_errors
+    def get_chat_messages(
+        self,
+        access_token: Optional[str],
+        *,
+        chat_id: str | UUID,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        GET /chats/{chat_id}/messages?limit=X
+        Returns ListMessagesResponse as dict: { "items": [...] }
+        """
+        resp = self._client.get(
+            f"/chats/{chat_id}/messages",
+            headers=self._auth_headers(access_token) or None,
+            params={"limit": limit},
+        )
+        resp.raise_for_status()
+        return resp.json()

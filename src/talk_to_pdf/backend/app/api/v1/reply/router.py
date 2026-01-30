@@ -11,6 +11,7 @@ from talk_to_pdf.backend.app.api.v1.reply.deps import (
     get_get_chat_use_case,
     get_list_chats_use_case,
     get_delete_chat_use_case,
+    get_get_chat_messages_use_case,
 )
 from talk_to_pdf.backend.app.api.v1.reply.mappers import (
     to_search_project_context_input,
@@ -21,6 +22,8 @@ from talk_to_pdf.backend.app.api.v1.reply.mappers import (
     to_delete_chat_input_dto,
     chat_dto_to_response,
     list_chats_dto_to_response,
+    to_get_chat_messages_input_dto,
+    list_messages_dto_to_response,
 )
 from talk_to_pdf.backend.app.api.v1.reply.schemas import (
     QueryRequest,
@@ -28,6 +31,7 @@ from talk_to_pdf.backend.app.api.v1.reply.schemas import (
     CreateChatRequest,
     ChatResponse,
     ListChatsResponse,
+    ListMessagesResponse,
 )
 from talk_to_pdf.backend.app.api.v1.users.deps import get_logged_in_user
 from talk_to_pdf.backend.app.application.reply.use_cases.stream_reply import StreamReplyUseCase
@@ -35,6 +39,7 @@ from talk_to_pdf.backend.app.application.reply.use_cases.create_chat import Crea
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat import GetChatUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.list_chats import ListChatsUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.delete_chat import DeleteChatUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
 from talk_to_pdf.backend.app.application.users import CurrentUserDTO
 
 
@@ -46,6 +51,7 @@ create_chat_dep = Annotated[CreateChatUseCase, Depends(get_create_chat_use_case)
 get_chat_dep = Annotated[GetChatUseCase, Depends(get_get_chat_use_case)]
 list_chats_dep = Annotated[ListChatsUseCase, Depends(get_list_chats_use_case)]
 delete_chat_dep = Annotated[DeleteChatUseCase, Depends(get_delete_chat_use_case)]
+get_chat_messages_dep = Annotated[GetChatMessagesUseCase, Depends(get_get_chat_messages_use_case)]
 
 
 # -------------------------
@@ -128,4 +134,23 @@ async def delete_chat(
     dto = to_delete_chat_input_dto(chat_id, owner_id=user.id)
     await uc.execute(dto)
     return None
+
+
+# -------------------------
+# Message endpoints
+# -------------------------
+@router.get(
+    "/chats/{chat_id}/messages",
+    response_model=ListMessagesResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_chat_messages(
+    chat_id: UUID,
+    user: logged_in_user_dep,
+    uc: get_chat_messages_dep,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> ListMessagesResponse:
+    dto = to_get_chat_messages_input_dto(chat_id, owner_id=user.id, limit=limit)
+    messages = await uc.execute(dto)
+    return list_messages_dto_to_response(messages)
 

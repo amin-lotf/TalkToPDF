@@ -10,6 +10,8 @@ from talk_to_pdf.backend.app.api.v1.reply.schemas import (
     CreateChatRequest,
     ChatResponse,
     ListChatsResponse,
+    MessageResponse,
+    ListMessagesResponse,
 )
 from talk_to_pdf.backend.app.application.reply.dto import (
     ReplyOutputDTO,
@@ -19,11 +21,14 @@ from talk_to_pdf.backend.app.application.reply.dto import (
     ListChatsInputDTO,
     GetChatInputDTO,
     DeleteChatInputDTO,
+    MessageDTO,
+    GetChatMessagesInputDTO,
 )
 
 
 def to_search_project_context_input(dto: QueryRequest, *, owner_id) -> ReplyInputDTO:
     return ReplyInputDTO(
+        chat_id=dto.chat_id,
         project_id=dto.project_id,
         owner_id=owner_id,
         query=dto.query,
@@ -106,4 +111,31 @@ def chat_dto_to_response(dto: ChatDTO) -> ChatResponse:
 def list_chats_dto_to_response(dtos: list[ChatDTO]) -> ListChatsResponse:
     return ListChatsResponse(
         items=[chat_dto_to_response(dto) for dto in dtos]
+    )
+
+
+# -------------------------
+# Message mappers
+# -------------------------
+def to_get_chat_messages_input_dto(chat_id: UUID, *, owner_id: UUID, limit: int = 50) -> GetChatMessagesInputDTO:
+    return GetChatMessagesInputDTO(
+        owner_id=owner_id,
+        chat_id=chat_id,
+        limit=limit,
+    )
+
+
+def message_dto_to_response(dto: MessageDTO) -> MessageResponse:
+    return MessageResponse(
+        id=dto.id,
+        chat_id=dto.chat_id,
+        role=dto.role.value if hasattr(dto.role, 'value') else str(dto.role),
+        content=dto.content,
+        created_at=dto.created_at.isoformat(),
+    )
+
+
+def list_messages_dto_to_response(dtos: list[MessageDTO]) -> ListMessagesResponse:
+    return ListMessagesResponse(
+        items=[message_dto_to_response(dto) for dto in dtos]
     )
