@@ -6,8 +6,8 @@ from typing import Any, Dict, Optional
 import streamlit as st
 
 from talk_to_pdf.frontend.streamlit_app.main import get_api
-from talk_to_pdf.frontend.streamlit_app.ui.auth import require_login
-from talk_to_pdf.frontend.streamlit_app.ui.layout import hide_sidebar_nav, page_frame
+from talk_to_pdf.frontend.streamlit_app.ui.auth import require_login, logout
+from talk_to_pdf.frontend.streamlit_app.ui.layout import hide_sidebar_nav
 from talk_to_pdf.frontend.streamlit_app.services.api import ApiError
 
 st.set_page_config(page_title="Project", layout="wide")
@@ -86,21 +86,88 @@ except ApiError as e:
     st.page_link("pages/0_home.py", label="Back to home")
     st.stop()
 
-page_frame(project.get("name", "Project"), key_prefix="project")
-# page content
-st.caption(f"ID: {project.get('id')}")
+# -----------------------------
+# Sidebar: Navigation & Project Info
+# -----------------------------
+def _sidebar_navigation() -> None:
+    """Display navigation buttons at the top of sidebar"""
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("🏠 Home", use_container_width=True, key="nav_home"):
+            st.switch_page("pages/0_home.py")
+    with col2:
+        if st.button("🚪 Logout", use_container_width=True, key="nav_logout"):
+            logout()
+
+    st.sidebar.divider()
+    st.sidebar.markdown(f"### 📄 {project.get('name', 'Project')}")
+    st.sidebar.caption(f"ID: {project.get('id')}")
+    st.sidebar.divider()
+
+# -----------------------------
+# Sidebar: Indexing Status
+# -----------------------------
+def _sidebar_indexing(latest_status, latest_err, pending_doc_id) -> None:
+    """Display indexing status and controls in sidebar"""
+    st.sidebar.markdown("### 🔍 Indexing")
+
+    if latest_err:
+        st.sidebar.error(latest_err)
+
+    if latest_status:
+        status = str(latest_status.get("status") or "unknown")
+        progress = int(latest_status.get("progress") or 0)
+        message = latest_status.get("message")
+        error = latest_status.get("error")
+        cancel_requested = bool(latest_status.get("cancel_requested") or False)
+
+        st.sidebar.markdown(f"**Status:** {_status_badge(status)} {status}")
+        st.sidebar.progress(max(0, min(100, progress)) / 100.0)
+
+        if cancel_requested:
+            st.sidebar.caption("Cancel requested…")
+
+        if message:
+            st.sidebar.info(message)
+        if error:
+            st.sidebar.error(error)
+
+        c1, c2 = st.sidebar.columns([1, 1], gap="small")
+        with c1:
+            if st.button("🔄 Refresh", use_container_width=True, key="idx_refresh"):
+                st.rerun()
+
+        with c2:
+            if st.button("❌ Cancel", use_container_width=True, key="idx_cancel"):
+                try:
+                    api.cancel_indexing(token, index_id=str(latest_status["index_id"]))
+                    st.sidebar.warning("Cancel requested.")
+                    st.rerun()
+                except ApiError as e:
+                    st.sidebar.error(str(e))
+    else:
+        st.sidebar.caption("No indexing status yet.")
+        if pending_doc_id:
+            if st.sidebar.button("▶️ Start indexing", use_container_width=True, key="idx_start"):
+                try:
+                    started = api.start_indexing(
+                        token,
+                        project_id=str(project_id),
+                        document_id=str(pending_doc_id),
+                    )
+                    st.session_state["current_index_id"] = started["index_id"]
+                    st.sidebar.success("Indexing started.")
+                    st.rerun()
+                except ApiError as e:
+                    st.sidebar.error(str(e))
+
+    st.sidebar.divider()
 
 # -----------------------------
 # Sidebar: Chat Management
 # -----------------------------
-def _sidebar_chats() -> None:
+def _sidebar_chats(index_ready: bool) -> None:
     """Display chat creation and list in sidebar (only when index is ready)"""
-    # Check if index is ready
-    index_ready = False
-    if latest_status:
-        s = str(latest_status.get("status") or "").lower()
-        index_ready = s in {"ready", "completed"}
-
     if not index_ready:
         st.sidebar.info("🔄 Finish indexing to create chats")
         return
@@ -175,7 +242,7 @@ def _sidebar_chats() -> None:
                         st.error(str(e))
 
 # -----------------------------
-# Indexing (auto-start + polling)
+# Indexing (auto-start + polling) - moved to sidebar
 # -----------------------------
 auto_start = bool(st.session_state.get("auto_start_indexing"))
 pending_doc_id = st.session_state.get("pending_index_document_id")
@@ -229,100 +296,82 @@ else:
         else:
             latest_err = msg
 
-st.divider()
-st.subheader("Indexing")
-
-if latest_err:
-    st.error(latest_err)
-
-if latest_status:
-    status = str(latest_status.get("status") or "unknown")
-    progress = int(latest_status.get("progress") or 0)
-    message = latest_status.get("message")
-    error = latest_status.get("error")
-    cancel_requested = bool(latest_status.get("cancel_requested") or False)
-
-    st.markdown(f"### 🔄 {status}")
-    st.progress(max(0, min(100, progress)))
-
-    if cancel_requested:
-        st.caption("Cancel requested…")
-
-    if message:
-        st.info(message)
-    if error:
-        st.error(error)
-
-    c1, c2 = st.columns([1, 1], gap="small")
-    with c1:
-        if st.button("Refresh", use_container_width=True):
-            st.rerun()
-
-    with c2:
-        if st.button("Cancel indexing", use_container_width=True):
-            try:
-                api.cancel_indexing(token, index_id=str(latest_status["index_id"]))
-                st.warning("Cancel requested.")
-                st.rerun()
-            except ApiError as e:
-                st.error(str(e))
-else:
-    st.caption("No indexing status yet.")
-    st.caption(f"Document to index: {pending_doc_id or 'unknown'}")
-    if pending_doc_id and st.button("Start indexing", use_container_width=False):
-        try:
-            started = api.start_indexing(
-                token,
-                project_id=str(project_id),
-                document_id=str(pending_doc_id),
-            )
-            st.session_state["current_index_id"] = started["index_id"]
-            st.success("Indexing started.")
-            st.rerun()
-        except ApiError as e:
-            st.error(str(e))
-
-# Call sidebar function to display chats
-_sidebar_chats()
-
-# -----------------------------
-# Main Content: Selected Chat
-# -----------------------------
-selected_chat_id = st.session_state.get("selected_chat_id")
-
 # Guard: check if index is ready
 index_ready = False
 if latest_status:
     s = str(latest_status.get("status") or "").lower()
     index_ready = s in {"ready", "completed"}
 
+# Display sidebar components in order
+_sidebar_navigation()
+_sidebar_indexing(latest_status, latest_err, pending_doc_id)
+_sidebar_chats(index_ready)
+
+# -----------------------------
+# Main Content: Chat Interface
+# -----------------------------
+selected_chat_id = st.session_state.get("selected_chat_id")
+
 if not index_ready:
     st.info("💡 Finish indexing to create and use chats.")
 elif not selected_chat_id:
     st.info("💡 Select or create a chat from the sidebar to start asking questions.")
 else:
-    # Show the selected chat
+    # Initialize chat history in session state
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+
+    # Show the selected chat with chat-style interface
+    # Upper part: Conversation history
+    st.markdown("### 💬 Conversation")
+
+    # Container for chat messages with scrollable area
+    chat_container = st.container(height=500)
+
+    with chat_container:
+        if not st.session_state["chat_history"]:
+            st.caption("No messages yet. Start by asking a question below.")
+        else:
+            for i, msg in enumerate(st.session_state["chat_history"]):
+                if msg["role"] == "user":
+                    st.markdown(f"""
+                    <div style='background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                        <strong>🙋 You:</strong><br>{msg['content']}
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                        <strong>🤖 Assistant:</strong><br>{msg['content']}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+    # Lower part: Input area (fixed at bottom)
     st.divider()
-    st.subheader("💬 Ask a Question")
+    st.markdown("### 📝 Ask a Question")
 
     # Input controls
-    with st.form("query_form", clear_on_submit=False):
-        q = st.text_input("Question", value=st.session_state.get("last_query", ""), placeholder="Ask about the PDF…")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            top_k = st.number_input("top_k", min_value=1, max_value=50, value=10, step=1)
-        with c2:
-            top_n = st.number_input("top_n", min_value=1, max_value=20, value=5, step=1)
-        with c3:
-            rerank_timeout_s = st.number_input("rerank_timeout_s", min_value=0.0, max_value=20.0, value=0.6, step=0.1)
+    with st.form("query_form", clear_on_submit=True):
+        q = st.text_area("Your question", placeholder="Ask about the PDF…", height=100)
 
-        submitted = st.form_submit_button("Run query")
+        with st.expander("⚙️ Advanced Settings"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                top_k = st.number_input("top_k", min_value=1, max_value=50, value=10, step=1)
+            with c2:
+                top_n = st.number_input("top_n", min_value=1, max_value=20, value=5, step=1)
+            with c3:
+                rerank_timeout_s = st.number_input("rerank_timeout_s", min_value=0.0, max_value=20.0, value=0.6, step=0.1)
+
+        submitted = st.form_submit_button("📤 Send", use_container_width=True)
 
     if submitted:
         if not q.strip():
             st.warning("Type a question first.")
         else:
-            st.session_state["last_query"] = q
+            # Add user message to chat history
+            st.session_state["chat_history"].append({"role": "user", "content": q.strip()})
+
             try:
                 t0 = time.perf_counter()
                 reply = api.query_project(
@@ -334,60 +383,15 @@ else:
                     rerank_timeout_s=float(rerank_timeout_s),
                 )
                 dt_ms = (time.perf_counter() - t0) * 1000.0
-                st.caption(f"Latency: {dt_ms:.0f} ms")
+
+                # Add assistant message to chat history
+                answer = reply.get("answer", "")
+                st.session_state["chat_history"].append({"role": "assistant", "content": answer})
+
+                st.success(f"✅ Response received (Latency: {dt_ms:.0f} ms)")
+                st.rerun()
 
             except ApiError as e:
                 st.error(str(e))
-                reply = None
-
-            if reply:
-                # --- Answer ---
-                st.markdown("### Answer")
-                st.write(reply.get("answer", ""))
-
-                # --- Context inspector ---
-                st.markdown("### Context chunks (inspect quality)")
-
-                ctx = reply.get("context") or {}
-                chunks = ctx.get("chunks") or []
-
-                # quick stats
-                st.caption(
-                    f"index_id: {ctx.get('index_id')} | "
-                    f"embed_signature: {ctx.get('embed_signature')} | "
-                    f"metric: {ctx.get('metric')} | "
-                    f"chunks returned: {len(chunks)}"
-                )
-
-                # show chunks one-by-one (best for quality)
-                for i, ch in enumerate(chunks, start=1):
-                    score = ch.get("score")
-                    chunk_id = ch.get("chunk_id")
-                    chunk_index = ch.get("chunk_index")
-
-                    title = f"#{i}  score={score:.4f}  chunk_index={chunk_index}  id={chunk_id}"
-                    with st.expander(title, expanded=(i <= 2)):
-                        # main text
-                        st.write(ch.get("text", ""))
-
-                        # meta & citation (debug)
-                        meta = ch.get("meta")
-                        citation = ch.get("citation")
-
-                        m1, m2 = st.columns(2)
-                        with m1:
-                            st.caption("meta")
-                            st.json(meta if meta is not None else {})
-                        with m2:
-                            st.caption("citation")
-                            st.json(citation if citation is not None else {})
-
-                # raw payload toggle (useful when debugging mapping)
-                with st.expander("Raw reply payload (debug)", expanded=False):
-                    st.json(reply)
-
-
-st.divider()
-st.subheader("Project payload (temporary debug)")
-st.json(project)
+                st.session_state["chat_history"].pop()  # Remove user message if failed
 
