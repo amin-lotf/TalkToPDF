@@ -13,10 +13,13 @@ from talk_to_pdf.backend.app.application.reply.use_cases.delete_chat import Dele
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
 from talk_to_pdf.backend.app.core.config import settings
-from talk_to_pdf.backend.app.core.deps import get_uow_factory, get_reply_generation_config
+from talk_to_pdf.backend.app.core.deps import get_uow_factory, get_reply_generation_config, get_query_rewrite_config
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
-from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig, QueryRewriteConfig
 from talk_to_pdf.backend.app.infrastructure.common.embedders.factory_openai_langchain import OpenAIEmbedderFactory
+from talk_to_pdf.backend.app.infrastructure.reply.query_rewriter.factory_openai_rewriter import \
+    OpenAILlmQueryRewriterFactory
+from talk_to_pdf.backend.app.infrastructure.reply.query_rewriter.openai_query_rewriter import OpenAIQueryRewriter
 from talk_to_pdf.backend.app.infrastructure.reply.reply_generator.factory_openai_reply_generator import \
     OpenAILlmReplyGeneratorFactory
 from talk_to_pdf.backend.app.infrastructure.reply.reply_generator.openai_reply_generator import OpenAIReplyGenerator
@@ -36,16 +39,25 @@ def get_open_ai_reply_generator(
         raise RuntimeError("OPENAI_API_KEY must be set")
     return OpenAILlmReplyGeneratorFactory(api_key=settings.OPENAI_API_KEY).create(config)
 
+@lru_cache(maxsize=1)
+def get_open_ai_query_rewriter(
+        config: Annotated[QueryRewriteConfig, Depends(get_query_rewrite_config)]
+)-> OpenAIQueryRewriter:
+    if settings.OPENAI_API_KEY is None:
+        raise RuntimeError("OPENAI_API_KEY must be set")
+    return OpenAILlmQueryRewriterFactory(api_key=settings.OPENAI_API_KEY).create(config)
 
 def get_build_index_context_use_case(
         uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)],
-        embedding_factory: Annotated[OpenAIEmbedderFactory, Depends(get_open_ai_embedding_factory)]
+        embedding_factory: Annotated[OpenAIEmbedderFactory, Depends(get_open_ai_embedding_factory)],
+        query_rewriter: Annotated[OpenAIQueryRewriter, Depends(get_open_ai_query_rewriter)]
 ) -> BuildIndexContextUseCase:
     return BuildIndexContextUseCase(
         uow_factory=uow_factory,
         embedder_factory=embedding_factory,
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
+        query_rewriter=query_rewriter
     )
 
 def get_get_chat_messages_use_case(

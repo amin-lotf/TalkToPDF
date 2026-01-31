@@ -7,9 +7,9 @@ from typing import AsyncIterator, Sequence
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig
-from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
-from talk_to_pdf.backend.app.domain.reply.value_objects import ChatTurn, GenerateReplyInput
+from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig, ChatTurn
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
+from talk_to_pdf.backend.app.domain.reply.value_objects import GenerateReplyInput
 
 DEFAULT_SYSTEM = (
     "You are a helpful assistant.\n"

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     REPLY_MODEL: str = 'xxx'
     REPLY_MAX_OUTPUT_TOKENS: Optional[int] = None
     REPLY_MAX_CONTEXT_CHARS: int = 20000
+    QUERY_REWRITER_PROVIDER: str = 'xxx'
+    QUERY_REWRITER_TEMPERATURE: float = 0.2
+    QUERY_REWRITER_MODEL: str = 'xxx'
+    QUERY_REWRITER_MAX_TURN: int = 6
+    QUERY_REWRITER_MAX_HISTORY_CHARS: int = 6000
 
 
 settings = Settings()

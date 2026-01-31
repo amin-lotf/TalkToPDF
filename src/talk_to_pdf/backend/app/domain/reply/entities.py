@@ -6,7 +6,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from talk_to_pdf.backend.app.domain.common import utcnow
-from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations
 
 

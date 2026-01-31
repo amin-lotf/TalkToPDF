@@ -3,6 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
+from talk_to_pdf.backend.app.domain.common.value_objects import ChatTurn
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,6 +12,7 @@ class SearchInputDTO:
     project_id: UUID
     index_id: UUID
     query: str
+    message_history: list[ChatTurn]
     top_n: int
     top_k: int
     rerank_timeout_s: float

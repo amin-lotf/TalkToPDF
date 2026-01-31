@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Sequence, Any
 from uuid import UUID
+
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,3 +179,62 @@ class ReplyGenerationConfig:
         Useful for debugging / observability, NOT for indexing.
         """
         return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class QueryRewriteConfig:
+    # keep only the last N turns to avoid noise
+    provider: str
+    model: str
+    temperature: float = 0.2
+    max_turns: int = 6
+    # hard cap on history text to avoid bloating prompts
+    max_history_chars: int = 6000
+
+    def to_dict(self) -> dict:
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_turns": self.max_turns,
+            "max_history_chars": self.max_history_chars,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "QueryRewriteConfig":
+        allowed = {
+            "provider",
+            "model",
+            "temperature",
+            "max_turns",
+            "max_history_chars",
+        }
+        unknown = set(d.keys()) - allowed
+        if unknown:
+            raise ValueError(f"Unknown keys in reranker_config: {sorted(unknown)}")
+
+        return cls(
+            max_turns=int(d.get("max_turns", 6)),
+            max_history_chars=int(d.get("max_history_chars", 6000)),
+        )
+
+    def canonical_json(self) -> str:
+        return json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+
+    def signature(self) -> str:
+        """
+        Optional.
+        Useful for debugging / observability, NOT for indexing.
+        """
+        return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class ChatTurn:
+    role: ChatRole
+    content: str

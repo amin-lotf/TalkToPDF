@@ -9,7 +9,7 @@ from talk_to_pdf.backend.app.application.reply.interfaces import ReplyGenerator
 from talk_to_pdf.backend.app.application.reply.mappers import (
     build_search_input_dto,
     create_reply_output_dto,
-    create_generate_answer_input,
+    create_generate_answer_input, map_history,
 )
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
@@ -17,7 +17,7 @@ from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages impor
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.retrieval.errors import IndexNotFoundOrForbidden
 from talk_to_pdf.backend.app.domain.reply.errors import ChatNotFoundOrForbidden
-from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 
 
 class StreamReplyUseCase:
@@ -63,17 +63,21 @@ class StreamReplyUseCase:
             )
         )
 
-        # 3) Build RAG context
-        search_input = build_search_input_dto(dto=dto, index_id=idx.id)
-        context = await self._ctx_builder_uc.execute(search_input)
-
         # 4) Get chat history
-        chat_messages = await self._get_chat_messages_uc.execute(
+        chat_messages_dto = await self._get_chat_messages_uc.execute(
             GetChatMessagesInputDTO(
                 owner_id=dto.owner_id,
                 chat_id=dto.chat_id,
             )
         )
+
+        chat_messages=map_history(chat_messages_dto)
+
+        # 3) Build RAG context
+        search_input = build_search_input_dto(dto=dto, index_id=idx.id,chat_messages=chat_messages)
+        context = await self._ctx_builder_uc.execute(search_input)
+
+
 
         # 5) Build GenerateReplyInput
         generate_input = create_generate_answer_input(

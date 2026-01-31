@@ -8,7 +8,7 @@ from uuid import UUID
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO, ContextChunkDTO
 from talk_to_pdf.backend.app.application.common.progress import ProgressEvent, ProgressSink
 from talk_to_pdf.backend.app.application.common.interfaces import EmbedderFactory
-from talk_to_pdf.backend.app.application.retrieval.interfaces import Reranker
+from talk_to_pdf.backend.app.application.retrieval.interfaces import Reranker, QueryRewriter
 from talk_to_pdf.backend.app.application.retrieval.mappers import create_context_pack_dto
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
@@ -61,6 +61,7 @@ class BuildIndexContextUseCase:
         reranker: Reranker | None = None,
         progress: ProgressSink | None = None,
         metric: VectorMetric = VectorMetric.COSINE,
+        query_rewriter:QueryRewriter,
         # guardrails to avoid abuse / accidental huge loads
         max_top_k: int,
         max_top_n: int,
@@ -70,6 +71,7 @@ class BuildIndexContextUseCase:
         self._reranker = reranker
         self._progress: ProgressSink = progress or NullProgressSink()
         self._metric = metric
+        self._query_rewriter = query_rewriter
         self._max_top_k = max_top_k
         self._max_top_n = max_top_n
 
@@ -111,8 +113,9 @@ class BuildIndexContextUseCase:
                 payload={"index_id": str(dto.index_id)},
             )
         )
-        embedder = self._embedder_factory.create(embed_cfg)
-        vectors = await embedder.aembed_documents([dto.query])
+        embedder =  self._embedder_factory.create(embed_cfg)
+        rewritten_query= await self._query_rewriter.rewrite(query=dto.query,history=dto.message_history)
+        vectors = await embedder.aembed_documents([rewritten_query])
         if not vectors or not vectors[0]:
             raise InvalidRetrieval("Embedding provider returned empty vector")
         qvec = Vector.from_list(vectors[0])

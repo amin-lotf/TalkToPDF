@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
 
-from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 from talk_to_pdf.backend.app.infrastructure.db import Base
 
 

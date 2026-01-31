@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
-from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
+from talk_to_pdf.backend.app.domain.common.value_objects import ChatTurn
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,12 +35,6 @@ class ChatMessageCitations:
     rerank_signature: str | None
     prompt_version: str | None
     model: str | None
-
-
-@dataclass(frozen=True, slots=True)
-class ChatTurn:
-    role: ChatRole
-    content: str
 
 
 @dataclass(frozen=True, slots=True)
