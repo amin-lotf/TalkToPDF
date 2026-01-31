@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status, Query
+from fastapi.responses import StreamingResponse
 
 from talk_to_pdf.backend.app.api.v1.reply.deps import (
     get_stream_reply_use_case,
@@ -59,17 +60,23 @@ get_chat_messages_dep = Annotated[GetChatMessagesUseCase, Depends(get_get_chat_m
 # -------------------------
 @router.post(
     "/query",
-    response_model=ReplyResponse,
     status_code=status.HTTP_200_OK,
 )
 async def query_project(
     body: QueryRequest,
     user: logged_in_user_dep,
     uc: stream_reply_dep,
-) -> ReplyResponse:
+) -> StreamingResponse:
     app_dto = to_search_project_context_input(body, owner_id=user.id)
-    out = await uc.execute(app_dto)
-    return to_reply_response(out)
+
+    async def stream_generator():
+        async for chunk in uc.execute(app_dto):
+            yield chunk
+
+    return StreamingResponse(
+        stream_generator(),
+        media_type="text/plain",
+    )
 
 
 # -------------------------

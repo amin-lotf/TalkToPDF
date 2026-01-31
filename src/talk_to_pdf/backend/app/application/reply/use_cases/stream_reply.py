@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, AsyncIterator
 
 from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder
 from talk_to_pdf.backend.app.application.reply.dto import ReplyInputDTO, ReplyOutputDTO, CreateMessageInputDTO, \
     GetChatMessagesInputDTO, MessageDTO
 from talk_to_pdf.backend.app.application.reply.interfaces import ReplyGenerator
-from talk_to_pdf.backend.app.application.reply.mappers import build_search_input_dto, create_reply_output_dto
+from talk_to_pdf.backend.app.application.reply.mappers import (
+    build_search_input_dto,
+    create_reply_output_dto,
+    create_generate_answer_input,
+)
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
 
@@ -31,7 +35,7 @@ class StreamReplyUseCase:
         self._get_chat_messages_uc = get_chat_messages_uc
         self._reply_generator = reply_generator
 
-    async def execute(self, dto: ReplyInputDTO) -> ReplyOutputDTO:
+    async def execute(self, dto: ReplyInputDTO) -> AsyncIterator[str]:
         # 1) Validate index + chat (ownership + same project)
         uow = self._uow_factory()
         async with uow:
@@ -63,21 +67,35 @@ class StreamReplyUseCase:
         search_input = build_search_input_dto(dto=dto, index_id=idx.id)
         context = await self._ctx_builder_uc.execute(search_input)
 
-        uow2 = self._uow_factory()
-        async with uow2:
-            chat_messages = await self._get_chat_messages_uc.execute(
-                GetChatMessagesInputDTO(
-                    owner_id=dto.owner_id,
-                    chat_id=dto.chat_id,
-                )
+        # 4) Get chat history
+        chat_messages = await self._get_chat_messages_uc.execute(
+            GetChatMessagesInputDTO(
+                owner_id=dto.owner_id,
+                chat_id=dto.chat_id,
             )
+        )
 
-        # 4) LLM call (stub for now)
-        answer_text = "LLM response"
-        model_name = "gpt-4"
+        # 5) Build GenerateReplyInput
+        generate_input = create_generate_answer_input(
+            query=dto.query,
+            context_pack_dto=context,
+            message_history=chat_messages,
+            system_prompt=None,
+        )
+
+        # 6) Stream LLM response
+        model_name = "gpt-4o"
         prompt_version = "v1"
 
-        # 5) Persist assistant message with citations (CreateChatMessageUseCase handles citation creation)
+        # Accumulate the full answer as we stream
+        answer_chunks: list[str] = []
+
+        async for chunk in self._reply_generator.stream_answer(generate_input):
+            answer_chunks.append(chunk)
+            yield chunk
+
+        # 7) Persist assistant message with citations after streaming completes
+        answer_text = "".join(answer_chunks)
         await self._create_msg_uc.execute(
             CreateMessageInputDTO(
                 owner_id=dto.owner_id,
@@ -90,10 +108,4 @@ class StreamReplyUseCase:
                 prompt_version=prompt_version,
                 model=model_name,
             )
-        )
-
-        return create_reply_output_dto(
-            dto=dto,
-            answer_text=answer_text,
-            context=context,
         )

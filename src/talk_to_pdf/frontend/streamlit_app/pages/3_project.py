@@ -312,6 +312,18 @@ _sidebar_chats(index_ready)
 # -----------------------------
 selected_chat_id = st.session_state.get("selected_chat_id")
 
+# Clear chat selection when switching projects
+if "last_viewed_project" not in st.session_state or st.session_state["last_viewed_project"] != project_id:
+    st.session_state["last_viewed_project"] = project_id
+    st.session_state.pop("selected_chat_id", None)
+    # Clear all cached chat messages
+    keys_to_remove = [k for k in st.session_state.keys() if k.startswith("chat_messages_")]
+    for k in keys_to_remove:
+        st.session_state.pop(k, None)
+    st.rerun()
+
+selected_chat_id = st.session_state.get("selected_chat_id")
+
 if not index_ready:
     st.info("💡 Finish indexing to create and use chats.")
 elif not selected_chat_id:
@@ -321,11 +333,12 @@ else:
     # Use a key that changes when chat_id changes to trigger reload
     chat_key = f"chat_messages_{selected_chat_id}"
 
-    # Load messages if not already loaded for this chat
-    if chat_key not in st.session_state:
+    # Load messages if not already loaded for this chat OR if we need to reload
+    if chat_key not in st.session_state or st.session_state.get("reload_messages", False):
         try:
             messages_response = api.get_chat_messages(token, chat_id=selected_chat_id, limit=100)
             st.session_state[chat_key] = messages_response.get("items", [])
+            st.session_state["reload_messages"] = False
         except ApiError as e:
             st.error(f"Failed to load messages: {e}")
             st.session_state[chat_key] = []
@@ -339,70 +352,80 @@ else:
     # Container for chat messages with scrollable area
     chat_container = st.container(height=500)
 
+    # Helper function to render a single message
+    def render_message(msg, is_streaming=False):
+        if msg["role"] == "user":
+            st.markdown(f"""
+            <div style='background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                <strong>🙋 You:</strong><br>{msg['content']}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            # Assistant message with expandable citations
+            content = msg.get('content', '')
+            if is_streaming:
+                content += "▌"  # Add cursor for streaming effect
+
+            st.markdown(f"""
+            <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                <strong>🤖 Assistant:</strong><br>{content}
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Show citations in a compact expander (collapsed by default) only if not streaming
+            if not is_streaming:
+                citations_data = msg.get("citations")
+                if citations_data:
+                    chunks = citations_data.get("chunks", [])
+                    num_sources = len(chunks)
+
+                    with st.expander(f"📎 {num_sources} Source{'s' if num_sources != 1 else ''}", expanded=False):
+                        # Display metadata header
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.caption(f"**Model:** {citations_data.get('model', 'N/A')}")
+                        with col2:
+                            st.caption(f"**Top-k:** {citations_data.get('top_k', 'N/A')}")
+                        with col3:
+                            st.caption(f"**Metric:** {citations_data.get('metric', 'N/A')}")
+
+                        st.divider()
+
+                        # Display cited chunks
+                        if chunks:
+                            for idx, chunk in enumerate(chunks, 1):
+                                citation = chunk.get("citation", {})
+                                score = chunk.get("score")
+
+                                # Header with score
+                                score_text = f" (score: {score:.3f})" if score is not None else ""
+                                st.markdown(f"**Source {idx}**{score_text}")
+
+                                # Display all citation metadata dynamically
+                                if citation:
+                                    # Build metadata display from all keys in citation dict
+                                    metadata_items = []
+                                    for key, value in citation.items():
+                                        # Format the key nicely (e.g., char_start -> Char Start)
+                                        formatted_key = key.replace('_', ' ').title()
+                                        metadata_items.append(f"**{formatted_key}:** {value}")
+
+                                    if metadata_items:
+                                        # Display metadata in a clean format
+                                        st.caption(" • ".join(metadata_items))
+
+                                if idx < len(chunks):
+                                    st.divider()
+                        else:
+                            st.caption("No citations available.")
+
     with chat_container:
         if not messages:
             st.caption("No messages yet. Start by asking a question below.")
         else:
-            for i, msg in enumerate(messages):
-                if msg["role"] == "user":
-                    st.markdown(f"""
-                    <div style='background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0;'>
-                        <strong>🙋 You:</strong><br>{msg['content']}
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    # Assistant message with expandable citations
-                    st.markdown(f"""
-                    <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
-                        <strong>🤖 Assistant:</strong><br>{msg['content']}
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # Show citations in a compact expander (collapsed by default)
-                    citations_data = msg.get("citations")
-                    if citations_data:
-                        chunks = citations_data.get("chunks", [])
-                        num_sources = len(chunks)
-
-                        with st.expander(f"📎 {num_sources} Source{'s' if num_sources != 1 else ''}", expanded=False):
-                            # Display metadata header
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.caption(f"**Model:** {citations_data.get('model', 'N/A')}")
-                            with col2:
-                                st.caption(f"**Top-k:** {citations_data.get('top_k', 'N/A')}")
-                            with col3:
-                                st.caption(f"**Metric:** {citations_data.get('metric', 'N/A')}")
-
-                            st.divider()
-
-                            # Display cited chunks
-                            if chunks:
-                                for idx, chunk in enumerate(chunks, 1):
-                                    citation = chunk.get("citation", {})
-                                    score = chunk.get("score")
-
-                                    # Header with score
-                                    score_text = f" (score: {score:.3f})" if score is not None else ""
-                                    st.markdown(f"**Source {idx}**{score_text}")
-
-                                    # Display all citation metadata dynamically
-                                    if citation:
-                                        # Build metadata display from all keys in citation dict
-                                        metadata_items = []
-                                        for key, value in citation.items():
-                                            # Format the key nicely (e.g., char_start -> Char Start)
-                                            formatted_key = key.replace('_', ' ').title()
-                                            metadata_items.append(f"**{formatted_key}:** {value}")
-
-                                        if metadata_items:
-                                            # Display metadata in a clean format
-                                            st.caption(" • ".join(metadata_items))
-
-                                    if idx < len(chunks):
-                                        st.divider()
-                            else:
-                                st.caption("No citations available.")
+            # Render existing messages
+            for msg in messages:
+                render_message(msg, is_streaming=False)
 
     # Lower part: Input area (fixed at bottom)
     st.divider()
@@ -427,26 +450,52 @@ else:
         if not q.strip():
             st.warning("Type a question first.")
         else:
-            try:
-                t0 = time.perf_counter()
-                reply = api.query_project(
-                    token,
-                    project_id=str(project_id),
-                    chat_id=str(selected_chat_id),
-                    query=q.strip(),
-                    top_k=int(top_k),
-                    top_n=int(top_n),
-                    rerank_timeout_s=float(rerank_timeout_s),
-                )
-                dt_ms = (time.perf_counter() - t0) * 1000.0
+            with st.spinner("Getting response..."):
+                try:
+                    # Create placeholders for streaming display
+                    with chat_container:
+                        # Show user message immediately
+                        st.markdown(f"""
+                        <div style='background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                            <strong>🙋 You:</strong><br>{q.strip()}
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                # Clear the cached messages to reload from backend
-                if chat_key in st.session_state:
-                    st.session_state.pop(chat_key)
+                        # Create assistant message placeholder
+                        assistant_placeholder = st.empty()
+                        accumulated_text = []
 
-                st.success(f"✅ Response received (Latency: {dt_ms:.0f} ms)")
-                st.rerun()
+                        # Stream the response
+                        for chunk in api.query_project_stream(
+                            token,
+                            project_id=str(project_id),
+                            chat_id=str(selected_chat_id),
+                            query=q.strip(),
+                            top_k=int(top_k),
+                            top_n=int(top_n),
+                            rerank_timeout_s=float(rerank_timeout_s),
+                        ):
+                            accumulated_text.append(chunk)
+                            # Update the assistant message display
+                            assistant_placeholder.markdown(f"""
+                            <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                                <strong>🤖 Assistant:</strong><br>{"".join(accumulated_text)}▌
+                            </div>
+                            """, unsafe_allow_html=True)
 
-            except ApiError as e:
-                st.error(str(e))
+                        # Final update without cursor
+                        assistant_placeholder.markdown(f"""
+                        <div style='background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0;'>
+                            <strong>🤖 Assistant:</strong><br>{"".join(accumulated_text)}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # Reload messages from backend
+                    st.session_state["reload_messages"] = True
+                    st.success("✅ Response received")
+                    time.sleep(0.5)
+                    st.rerun()
+
+                except ApiError as e:
+                    st.error(str(e))
 

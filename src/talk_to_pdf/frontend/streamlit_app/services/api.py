@@ -262,8 +262,7 @@ class Api:
         resp.raise_for_status()
         return None
 
-    @handle_httpx_errors
-    def query_project(
+    def query_project_stream(
             self,
             access_token: Optional[str],
             *,
@@ -273,9 +272,9 @@ class Api:
             top_k: int = 10,
             top_n: int = 5,
             rerank_timeout_s: float = 0.6,
-    ) -> Dict[str, Any]:
+    ):
         """
-        POST /query
+        POST /query (streaming)
         Body matches QueryRequest:
           - project_id: UUID
           - chat_id: UUID
@@ -284,8 +283,7 @@ class Api:
           - top_n: int
           - rerank_timeout_s: float
 
-        Returns ReplyResponse as dict:
-          { "query": "...", "answer": "...", "context": {...} }
+        Yields chunks of text as they arrive from the LLM.
         """
         payload = {
             "project_id": str(project_id),
@@ -296,13 +294,19 @@ class Api:
             "rerank_timeout_s": float(rerank_timeout_s),
         }
 
-        resp = self._client.post(
-            "/query",
-            headers=self._auth_headers(access_token) or None,
-            json=payload,
-        )
-        resp.raise_for_status()
-        return resp.json()
+        try:
+            with self._client.stream(
+                "POST",
+                "/query",
+                headers=self._auth_headers(access_token) or None,
+                json=payload,
+            ) as resp:
+                resp.raise_for_status()
+                for chunk in resp.iter_text():
+                    if chunk:
+                        yield chunk
+        except Exception as e:
+            raise ApiError(unwrap_error(e)) from e
 
     # ---------- Chat endpoints ----------
 
