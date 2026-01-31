@@ -9,7 +9,8 @@ from sqlalchemy import select
 
 from talk_to_pdf.backend.app.domain.projects.entities import Project, ProjectDocument
 from talk_to_pdf.backend.app.domain.projects.value_objects import ProjectName
-from talk_to_pdf.backend.app.domain.reply import Chat, ChatMessage, ChatRole
+from talk_to_pdf.backend.app.domain.reply import Chat, ChatMessage
+from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
 
 from talk_to_pdf.backend.app.infrastructure.db.models import ProjectModel
 from talk_to_pdf.backend.app.infrastructure.db.models.reply import ChatModel, ChatMessageModel

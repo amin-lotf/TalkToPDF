@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from talk_to_pdf.backend.app.application.common.dto import ContextPackDTO
-from talk_to_pdf.backend.app.domain.reply import ChatRole
+from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
 
 
 # -------------------------

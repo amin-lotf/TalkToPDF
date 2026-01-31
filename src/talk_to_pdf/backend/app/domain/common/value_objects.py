@@ -121,3 +121,57 @@ class RerankerConfig:
         Useful for debugging / observability, NOT for indexing.
         """
         return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class ReplyGenerationConfig:
+    provider: str
+    model: str
+    temperature: float = 0.2
+    max_output_tokens: int | None = None
+    max_context_chars: int = 20_000  # safety clip
+
+    def to_dict(self) -> dict:
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "temperature": float(self.temperature),
+            "max_output_tokens": int(self.max_output_tokens) if self.max_output_tokens is not None else None,
+            "max_context_chars": int(self.max_context_chars),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ReplyGenerationConfig":
+        allowed = {
+            "provider",
+            "model",
+            "temperature",
+            "max_output_tokens",
+            "max_context_chars",
+        }
+        unknown = set(d.keys()) - allowed
+        if unknown:
+            raise ValueError(f"Unknown keys in reranker_config: {sorted(unknown)}")
+
+        return cls(
+            provider=str(d["provider"]),
+            model=str(d["model"]),
+            temperature=float(d.get("temperature", 0.0)),
+            max_output_tokens=int(d.get("max_output_tokens")) if d.get("max_output_tokens") is not None else None,
+            max_context_chars=int(d.get("max_context_chars", 20_000))
+        )
+
+    def canonical_json(self) -> str:
+        return json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+
+    def signature(self) -> str:
+        """
+        Optional.
+        Useful for debugging / observability, NOT for indexing.
+        """
+        return hashlib.sha256(self.canonical_json().encode("utf-8")).hexdigest()

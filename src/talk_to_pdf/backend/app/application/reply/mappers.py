@@ -5,9 +5,10 @@ from uuid import UUID
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO
 from talk_to_pdf.backend.app.application.reply.dto import ChatDTO, ReplyInputDTO, MessageDTO, CreateChatInputDTO, \
     CreateMessageInputDTO, ReplyOutputDTO
-from talk_to_pdf.backend.app.domain.reply import ChatRole
+from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
 from talk_to_pdf.backend.app.domain.reply.entities import Chat, ChatMessage  # since you put both in entities.py
-from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations, CitedChunk
+from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations, CitedChunk, ChatTurn, \
+    GenerateReplyInput
 
 
 def build_search_input_dto(*, dto: ReplyInputDTO, index_id: UUID) -> SearchInputDTO:
@@ -132,3 +133,24 @@ def create_citations_from_context(
         model=model,
     )
 
+
+
+
+def render_context(pack: ContextPackDTO, *, max_chars: int = 12_000) -> str:
+    # render chunks as numbered sources
+    parts: list[str] = []
+    for i, ch in enumerate(pack.chunks, start=1):
+        parts.append(f"[{i}] {ch.text}")  # adjust field name
+    txt = "\n\n".join(parts)
+    return txt[:max_chars]
+
+def map_history(msgs: list[MessageDTO]) -> list[ChatTurn]:
+    return [ChatTurn(role=m.role, content=m.content) for m in msgs]
+
+def create_generate_answer_input(query:str,context_pack_dto:ContextPackDTO,message_history:list[MessageDTO],system_prompt:str | None = None) -> GenerateReplyInput:
+    return GenerateReplyInput(
+        query=query,
+        context=render_context(context_pack_dto),
+        history=map_history(message_history),
+        system_prompt=system_prompt,
+    )

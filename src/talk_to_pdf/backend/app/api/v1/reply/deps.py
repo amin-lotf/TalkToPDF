@@ -3,7 +3,7 @@ from typing import Annotated, Callable
 
 from fastapi import Depends
 
-from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder, EmbedderFactory
+from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.stream_reply import StreamReplyUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.create_chat import CreateChatUseCase
@@ -13,15 +13,28 @@ from talk_to_pdf.backend.app.application.reply.use_cases.delete_chat import Dele
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
 from talk_to_pdf.backend.app.core.config import settings
-from talk_to_pdf.backend.app.core.deps import get_uow, get_uow_factory
+from talk_to_pdf.backend.app.core.deps import get_uow_factory, get_reply_generation_config
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
+from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig
 from talk_to_pdf.backend.app.infrastructure.common.embedders.factory_openai_langchain import OpenAIEmbedderFactory
+from talk_to_pdf.backend.app.infrastructure.reply.reply_generator.factory_openai_reply_generator import \
+    OpenAILlmReplyGeneratorFactory
+from talk_to_pdf.backend.app.infrastructure.reply.reply_generator.openai_reply_generator import OpenAIReplyGenerator
+
 
 @lru_cache(maxsize=1)
 def get_open_ai_embedding_factory() -> OpenAIEmbedderFactory:
     if settings.OPENAI_API_KEY is None:
         raise RuntimeError("OPENAI_API_KEY must be set")
     return OpenAIEmbedderFactory(api_key=settings.OPENAI_API_KEY)
+
+@lru_cache(maxsize=1)
+def get_open_ai_reply_generator(
+        config: Annotated[ReplyGenerationConfig, Depends(get_reply_generation_config)]
+)-> OpenAIReplyGenerator:
+    if settings.OPENAI_API_KEY is None:
+        raise RuntimeError("OPENAI_API_KEY must be set")
+    return OpenAILlmReplyGeneratorFactory(api_key=settings.OPENAI_API_KEY).create(config)
 
 
 def get_build_index_context_use_case(
@@ -35,6 +48,11 @@ def get_build_index_context_use_case(
         max_top_n=settings.MAX_TOP_N,
     )
 
+def get_get_chat_messages_use_case(
+    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
+) -> GetChatMessagesUseCase:
+    return GetChatMessagesUseCase(uow_factory=uow_factory)
+
 def get_create_chat_message_use_case(uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]) -> CreateChatMessageUseCase:
     return CreateChatMessageUseCase(uow_factory=uow_factory)
 
@@ -42,12 +60,16 @@ def get_create_chat_message_use_case(uow_factory: Annotated[Callable[[], UnitOfW
 def get_stream_reply_use_case(
         uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)],
         context_builder: Annotated[ContextBuilder, Depends(get_build_index_context_use_case)],
-        create_chat_message_uc: Annotated[CreateChatMessageUseCase, Depends(get_create_chat_message_use_case)]
+        create_chat_message_uc: Annotated[CreateChatMessageUseCase, Depends(get_create_chat_message_use_case)],
+        get_chat_messages_uc: Annotated[GetChatMessagesUseCase, Depends(get_get_chat_messages_use_case)],
+        reply_generator: Annotated[OpenAIReplyGenerator, Depends(get_open_ai_reply_generator)]
 ) -> StreamReplyUseCase:
     return StreamReplyUseCase(
         uow_factory=uow_factory,
         ctx_builder_uc=context_builder,
-        create_msg_uc=create_chat_message_uc
+        create_msg_uc=create_chat_message_uc,
+        get_chat_messages_uc=get_chat_messages_uc,
+        reply_generator=reply_generator,
     )
 
 
@@ -75,7 +97,3 @@ def get_delete_chat_use_case(
     return DeleteChatUseCase(uow_factory=uow_factory)
 
 
-def get_get_chat_messages_use_case(
-    uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
-) -> GetChatMessagesUseCase:
-    return GetChatMessagesUseCase(uow_factory=uow_factory)

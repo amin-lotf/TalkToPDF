@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
-from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig, ReplyGenerationConfig
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
@@ -46,6 +46,15 @@ def get_embed_config()->EmbedConfig:
         model=settings.EMBED_MODEL,
         batch_size=settings.EMBED_BATCH_SIZE,
         dimensions=settings.EMBED_DIMENSIONS,
+    )
+
+def get_reply_generation_config()->ReplyGenerationConfig:
+    return ReplyGenerationConfig(
+        provider=settings.REPLY_PROVIDER,
+        model=settings.REPLY_MODEL,
+        temperature=settings.REPLY_TEMPERATURE,
+        max_output_tokens=settings.REPLY_MAX_OUTPUT_TOKENS,
+        max_context_chars=settings.REPLY_MAX_CONTEXT_CHARS,
     )
 
 

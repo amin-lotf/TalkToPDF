@@ -3,25 +3,33 @@ from __future__ import annotations
 from typing import Callable
 
 from talk_to_pdf.backend.app.application.common.interfaces import ContextBuilder
-from talk_to_pdf.backend.app.application.reply.dto import ReplyInputDTO, ReplyOutputDTO, CreateMessageInputDTO
+from talk_to_pdf.backend.app.application.reply.dto import ReplyInputDTO, ReplyOutputDTO, CreateMessageInputDTO, \
+    GetChatMessagesInputDTO, MessageDTO
+from talk_to_pdf.backend.app.application.reply.interfaces import ReplyGenerator
 from talk_to_pdf.backend.app.application.reply.mappers import build_search_input_dto, create_reply_output_dto
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
+from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
+
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.retrieval.errors import IndexNotFoundOrForbidden
 from talk_to_pdf.backend.app.domain.reply.errors import ChatNotFoundOrForbidden
-from talk_to_pdf.backend.app.domain.reply.entities import ChatRole
+from talk_to_pdf.backend.app.domain.reply.enums import ChatRole
 
 
 class StreamReplyUseCase:
     def __init__(
-        self,
-        uow_factory: Callable[[], UnitOfWork],
-        ctx_builder_uc: ContextBuilder,
-        create_msg_uc: CreateChatMessageUseCase,
+            self,
+            uow_factory: Callable[[], UnitOfWork],
+            ctx_builder_uc: ContextBuilder,
+            create_msg_uc: CreateChatMessageUseCase,
+            get_chat_messages_uc: GetChatMessagesUseCase,
+            reply_generator:ReplyGenerator
     ):
         self._uow_factory = uow_factory
         self._ctx_builder_uc = ctx_builder_uc
         self._create_msg_uc = create_msg_uc
+        self._get_chat_messages_uc = get_chat_messages_uc
+        self._reply_generator = reply_generator
 
     async def execute(self, dto: ReplyInputDTO) -> ReplyOutputDTO:
         # 1) Validate index + chat (ownership + same project)
@@ -54,6 +62,15 @@ class StreamReplyUseCase:
         # 3) Build RAG context
         search_input = build_search_input_dto(dto=dto, index_id=idx.id)
         context = await self._ctx_builder_uc.execute(search_input)
+
+        uow2 = self._uow_factory()
+        async with uow2:
+            chat_messages = await self._get_chat_messages_uc.execute(
+                GetChatMessagesInputDTO(
+                    owner_id=dto.owner_id,
+                    chat_id=dto.chat_id,
+                )
+            )
 
         # 4) LLM call (stub for now)
         answer_text = "LLM response"

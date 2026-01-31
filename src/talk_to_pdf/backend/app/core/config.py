@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True)
+    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True,env_parse_none_str='None')
     SQLALCHEMY_DATABASE_URL: str = 'xxx'
     TEST_SQLALCHEMY_DATABASE_URL: str = 'xxx'
     JWT_SECRET_KEY: str = 'xxx'
@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     CHUNKER_OVERLAP: int = 0
     MAX_TOP_K: int = 0
     MAX_TOP_N: int = 0
+    REPLY_PROVIDER: str = 'xxx'
+    REPLY_TEMPERATURE: float = 0.2
+    REPLY_MODEL: str = 'xxx'
+    REPLY_MAX_OUTPUT_TOKENS: Optional[int] = None
+    REPLY_MAX_CONTEXT_CHARS: int = 20000
 
 
 settings = Settings()
