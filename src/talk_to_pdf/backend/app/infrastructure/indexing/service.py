@@ -109,7 +109,7 @@ class IndexingWorkerService:
         texts= [c.text for c in chunks]
         vectors: list[Vector] = []
         try:
-            batches = _batched(texts, embed_cfg.batch_size)
+            batches = list(_batched(texts, embed_cfg.batch_size))
             total = len(texts)
             done = 0
             start_p = STEP_PROGRESS[IndexStep.EMBEDDING]

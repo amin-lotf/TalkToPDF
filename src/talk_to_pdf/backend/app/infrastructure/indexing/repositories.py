@@ -370,14 +370,14 @@ class SqlAlchemyChunkVectorRepository:
         if metric == VectorMetric.COSINE:
             distance_expr = emb_col.cosine_distance(vec)
             order_expr = distance_expr.asc()
-            score_expr = (-distance_expr).label("score")
+            score_expr = (1.0 - distance_expr).label("score")  # cosine similarity
         elif metric == VectorMetric.L2:
             distance_expr = emb_col.l2_distance(vec)
             order_expr = distance_expr.asc()
-            score_expr = (-distance_expr).label("score")
+            score_expr = (-distance_expr).label("score")  # or transform to 1/(1+d)
         elif metric == VectorMetric.INNER_PRODUCT:
-            # In many pgvector/sqlalchemy versions, max_inner_product returns a distance-like value
-            # (often -dot), where smaller is better.
+            # pgvector's inner product operator is distance-like in many bindings;
+            # keep your -distance approach if you're ordering ASC.
             distance_expr = emb_col.max_inner_product(vec)
             order_expr = distance_expr.asc()
             score_expr = (-distance_expr).label("score")
