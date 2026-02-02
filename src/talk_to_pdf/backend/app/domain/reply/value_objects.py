@@ -14,6 +14,7 @@ class CitedChunk:
     chunk_id: UUID
     score: float | None
     citation: dict[str, Any]  # must include doc_id + page/offsets
+    content: str | None = None  # chunk text content
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +36,7 @@ class ChatMessageCitations:
     rerank_signature: str | None
     prompt_version: str | None
     model: str | None
+    rewritten_query: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

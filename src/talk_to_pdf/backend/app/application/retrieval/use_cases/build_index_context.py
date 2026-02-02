@@ -166,6 +166,7 @@ class BuildIndexContextUseCase:
                 embed_signature=embed_sig,
                 metric=self._metric,
                 chunks=[],
+                rewritten_query=rewritten_query,
             )
 
         # ---------------------------------------
@@ -254,4 +255,5 @@ class BuildIndexContextUseCase:
             score_by_id,
             embed_sig,
             self._metric,
+            rewritten_query=rewritten_query,
         )

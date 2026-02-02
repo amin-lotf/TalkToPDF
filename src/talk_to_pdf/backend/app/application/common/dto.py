@@ -36,3 +36,4 @@ class ContextPackDTO:
     embed_signature: str
     metric: VectorMetric
     chunks: list[ContextChunkDTO]
+    rewritten_query: str | None = None

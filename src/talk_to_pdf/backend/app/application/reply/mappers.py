@@ -72,6 +72,7 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
                     "chunk_id": str(chunk.chunk_id),
                     "score": chunk.score,
                     "citation": chunk.citation,
+                    "content": chunk.content,
                 }
                 for chunk in msg.citations.chunks
             ],
@@ -79,6 +80,7 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
             "rerank_signature": msg.citations.rerank_signature,
             "prompt_version": msg.citations.prompt_version,
             "model": msg.citations.model,
+            "rewritten_query": msg.citations.rewritten_query,
         }
 
     return MessageDTO(
@@ -132,6 +134,7 @@ def create_citations_from_context(
         rerank_signature=rerank_signature,
         prompt_version=prompt_version,
         model=model,
+        rewritten_query=context.rewritten_query,
     )
 
 

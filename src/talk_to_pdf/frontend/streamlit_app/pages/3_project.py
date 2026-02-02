@@ -380,6 +380,12 @@ else:
                     num_sources = len(chunks)
 
                     with st.expander(f"📎 {num_sources} Source{'s' if num_sources != 1 else ''}", expanded=False):
+                        # Display rewritten query if available
+                        rewritten_query = citations_data.get('rewritten_query')
+                        if rewritten_query:
+                            st.markdown(f"**🔄 Rewritten Query:** _{rewritten_query}_")
+                            st.divider()
+
                         # Display metadata header
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -396,10 +402,19 @@ else:
                             for idx, chunk in enumerate(chunks, 1):
                                 citation = chunk.get("citation", {})
                                 score = chunk.get("score")
+                                content = chunk.get("content")
 
                                 # Header with score
                                 score_text = f" (score: {score:.3f})" if score is not None else ""
                                 st.markdown(f"**Source {idx}**{score_text}")
+
+                                # Display chunk content if available
+                                if content:
+                                    st.markdown(f"""
+                                    <div style='background-color: #ffffff; padding: 10px; border-left: 3px solid #4CAF50; margin: 5px 0;'>
+                                        {content}
+                                    </div>
+                                    """, unsafe_allow_html=True)
 
                                 # Display all citation metadata dynamically
                                 if citation:
