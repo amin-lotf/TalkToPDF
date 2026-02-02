@@ -4,4 +4,5 @@ from talk_to_pdf.backend.app.domain.reply.value_objects import GenerateReplyInpu
 
 
 class ReplyGenerator(Protocol):
+    llm_model:str
     async def stream_answer(self, inp: GenerateReplyInput) -> AsyncIterator[str]:...

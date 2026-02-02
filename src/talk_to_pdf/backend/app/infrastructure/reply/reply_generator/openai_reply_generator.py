@@ -31,6 +31,7 @@ class OpenAIReplyGenerator:
     def __init__(self, *, llm: ChatOpenAI, cfg: ReplyGenerationConfig) -> None:
         self._llm = llm
         self._cfg = cfg
+        self.llm_model = llm.model_name
 
     def _clip(self, text: str) -> str:
         t = (text or "").strip().replace("\u0000", "")

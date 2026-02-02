@@ -87,9 +87,6 @@ class StreamReplyUseCase:
             system_prompt=None,
         )
 
-        # 6) Stream LLM response
-        model_name = "gpt-4o"
-        prompt_version = "v1"
 
         # Accumulate the full answer as we stream
         answer_chunks: list[str] = []
@@ -109,7 +106,7 @@ class StreamReplyUseCase:
                 context=context,
                 top_k=dto.top_k,
                 rerank_signature=None,
-                prompt_version=prompt_version,
-                model=model_name,
+                prompt_version='0.1.0',
+                model=self._reply_generator.llm_model,
             )
         )
