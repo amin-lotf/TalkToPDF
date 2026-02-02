@@ -58,6 +58,7 @@ def create_chat_message_domain(create_dto: CreateMessageInputDTO) -> ChatMessage
         role=create_dto.role,
         content=create_dto.content,
         citations=citations,
+        metrics=create_dto.metrics,
     )
 
 def message_to_dto(msg: ChatMessage) -> MessageDTO:
@@ -83,6 +84,11 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
             "rewritten_query": msg.citations.rewritten_query,
         }
 
+    metrics_dict = None
+    if msg.metrics:
+        metrics_dict = msg.metrics.to_dict()
+
+
     return MessageDTO(
         id=msg.id,
         chat_id=msg.chat_id,
@@ -90,6 +96,7 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
         content=msg.content,
         created_at=msg.created_at,
         citations=citations_dict,
+        metrics=metrics_dict,
     )
 
 

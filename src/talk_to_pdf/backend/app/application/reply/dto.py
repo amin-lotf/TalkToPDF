@@ -6,6 +6,7 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.application.common.dto import ContextPackDTO
 from talk_to_pdf.backend.app.domain.common.enums import ChatRole
+from talk_to_pdf.backend.app.domain.reply.metrics import ReplyMetrics
 
 
 # -------------------------
@@ -56,6 +57,7 @@ class MessageDTO:
     content: str
     created_at: datetime
     citations: dict | None = None
+    metrics: dict | None = None
 
 @dataclass(frozen=True, slots=True)
 class CreateMessageInputDTO:
@@ -68,6 +70,7 @@ class CreateMessageInputDTO:
     rerank_signature: str | None = None
     prompt_version: str | None = None
     model: str | None = None
+    metrics: ReplyMetrics | None = None
 
 
 @dataclass(frozen=True, slots=True)

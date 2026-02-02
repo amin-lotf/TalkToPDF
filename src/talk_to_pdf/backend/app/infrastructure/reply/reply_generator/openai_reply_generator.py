@@ -10,6 +10,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationConfig, ChatTurn
 from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 from talk_to_pdf.backend.app.domain.reply.value_objects import GenerateReplyInput
+from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_tokens, count_message_tokens
 
 DEFAULT_SYSTEM = (
     "You are a helpful assistant.\n"
@@ -24,6 +25,20 @@ CONTEXT_PREAMBLE = (
 )
 
 
+@dataclass
+class PromptTokenBreakdown:
+    """Breakdown of tokens in the prompt."""
+    system: int
+    context: int
+    history: int
+    question: int
+
+
+@dataclass
+class StreamMetrics:
+    """Metrics collected during streaming."""
+    prompt_breakdown: PromptTokenBreakdown
+    completion_tokens: int = 0
 
 
 
@@ -32,6 +47,7 @@ class OpenAIReplyGenerator:
         self._llm = llm
         self._cfg = cfg
         self.llm_model = llm.model_name
+        self._last_metrics: StreamMetrics | None = None
 
     def _clip(self, text: str) -> str:
         t = (text or "").strip().replace("\u0000", "")
@@ -53,29 +69,67 @@ class OpenAIReplyGenerator:
                 msgs.append(AIMessage(content=content))
         return msgs
 
-    def _build_messages(self, inp: GenerateReplyInput) -> list[BaseMessage]:
+    def _build_messages(self, inp: GenerateReplyInput) -> tuple[list[BaseMessage], PromptTokenBreakdown]:
         system = inp.system_prompt or DEFAULT_SYSTEM
         context = self._clip(inp.context)
 
-        msgs: list[BaseMessage] = [
-            SystemMessage(content=system),
-        ]
+        # Build system message
+        system_msg = SystemMessage(content=system)
+        msgs: list[BaseMessage] = [system_msg]
 
+        # Count system tokens
+        system_tokens = count_message_tokens([system_msg], model=self.llm_model)
+
+        # Add context if present
+        context_tokens = 0
         if context:
-            # I prefer system-role context so user query stays clean
-            msgs.append(SystemMessage(content=CONTEXT_PREAMBLE + context))
+            context_msg = SystemMessage(content=CONTEXT_PREAMBLE + context)
+            msgs.append(context_msg)
+            context_tokens = count_message_tokens([context_msg], model=self.llm_model)
 
-        msgs.extend(self._map_turns(inp.history))
+        # Add history
+        history_msgs = self._map_turns(inp.history)
+        msgs.extend(history_msgs)
+        history_tokens = count_message_tokens(history_msgs, model=self.llm_model) if history_msgs else 0
 
-        msgs.append(HumanMessage(content=inp.query.strip()))
-        return msgs
+        # Add user question
+        question_msg = HumanMessage(content=inp.query.strip())
+        question_tokens = count_message_tokens([question_msg], model=self.llm_model)
+
+        breakdown = PromptTokenBreakdown(
+            system=system_tokens,
+            context=context_tokens,
+            history=history_tokens,
+            question=question_tokens,
+        )
+
+        return msgs, breakdown
 
     async def stream_answer(self, inp: GenerateReplyInput) -> AsyncIterator[str]:
-        msgs = self._build_messages(inp)
+        msgs, breakdown = self._build_messages(inp)
+
+        # Initialize metrics
+        completion_tokens = 0
 
         # LangChain streaming yields AIMessageChunk objects
         async for chunk in self._llm.astream(msgs):
             # chunk.content can be "" sometimes
             txt = getattr(chunk, "content", "") or ""
             if txt:
+                # Count completion tokens (approximate per chunk)
+                completion_tokens += count_tokens(txt, model=self.llm_model)
                 yield txt
+
+        # Store metrics for later retrieval
+        self._last_metrics = StreamMetrics(
+            prompt_breakdown=breakdown,
+            completion_tokens=completion_tokens,
+        )
+
+    def get_last_metrics(self) -> StreamMetrics | None:
+        """Get metrics from the last stream_answer call."""
+        return self._last_metrics
+
+    def clear_metrics(self) -> None:
+        """Clear stored metrics."""
+        self._last_metrics = None

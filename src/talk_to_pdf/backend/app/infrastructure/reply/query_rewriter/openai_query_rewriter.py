@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 
 from talk_to_pdf.backend.app.domain.common.value_objects import QueryRewriteConfig, ChatTurn
+from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_message_tokens
 
 REWRITE_SYSTEM = (
     "You are a query rewriting engine for a RAG system.\n"
@@ -34,10 +35,19 @@ REWRITE_HUMAN = (
 
 
 
+@dataclass
+class QueryRewriteResult:
+    """Result of query rewriting with metrics."""
+    rewritten_query: str
+    prompt_tokens: int
+    completion_tokens: int
+
+
 class OpenAIQueryRewriter:
     def __init__(self, *, llm: ChatOpenAI, cfg: QueryRewriteConfig) -> None:
         self._llm = llm
         self._cfg = cfg
+        self.llm_model = llm.model_name
 
     def _clip(self, text: str, *, limit: int) -> str:
         t = (text or "").strip().replace("\u0000", "")
@@ -90,11 +100,28 @@ class OpenAIQueryRewriter:
         Returns rewritten standalone query string.
         Safe fallback: returns original query if parsing fails.
         """
+        result = await self.rewrite_with_metrics(query=query, history=history)
+        return result.rewritten_query
+
+    async def rewrite_with_metrics(self, *, query: str, history: Sequence[ChatTurn]) -> QueryRewriteResult:
+        """
+        Returns rewritten query with token usage metrics.
+        Safe fallback: returns original query if parsing fails.
+        """
         msgs = self._build_messages(query=query, history=history)
+
+        # Count prompt tokens
+        prompt_tokens = count_message_tokens(msgs, model=self.llm_model)
 
         # We want a single JSON response. Use ainvoke (non-streaming).
         resp = await self._llm.ainvoke(msgs)
         txt = (getattr(resp, "content", "") or "").strip()
+
+        # Count completion tokens
+        completion_tokens = 0
+        if hasattr(resp, "response_metadata"):
+            usage = resp.response_metadata.get("token_usage", {})
+            completion_tokens = usage.get("completion_tokens", 0)
 
         # Very defensive parsing: accept only {"rewritten_query": "..."}
         # without importing extra libs if you prefer; but json is fine.
@@ -103,6 +130,12 @@ class OpenAIQueryRewriter:
         try:
             data = json.loads(txt)
             rq = (data.get("rewritten_query") or "").strip()
-            return rq if rq else (query or "").strip()
+            rewritten = rq if rq else (query or "").strip()
         except Exception:
-            return (query or "").strip()
+            rewritten = (query or "").strip()
+
+        return QueryRewriteResult(
+            rewritten_query=rewritten,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )

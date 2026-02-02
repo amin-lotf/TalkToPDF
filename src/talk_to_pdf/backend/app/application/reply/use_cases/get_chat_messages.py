@@ -78,6 +78,7 @@ class GetChatMessagesUseCase:
                         content=msg.content,
                         created_at=msg.created_at,
                         citations=updated_citations,
+                        metrics=msg.metrics,
                     )
                     updated_msgs.append(updated_msg)
                 else:

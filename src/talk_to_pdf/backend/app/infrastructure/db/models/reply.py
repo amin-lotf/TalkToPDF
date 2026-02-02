@@ -116,6 +116,11 @@ class ChatMessageModel(Base):
         nullable=True,
     )
 
+    metrics: Mapped[Optional[dict]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
     chat: Mapped["ChatModel"] = relationship(
         "ChatModel",
         back_populates="messages",

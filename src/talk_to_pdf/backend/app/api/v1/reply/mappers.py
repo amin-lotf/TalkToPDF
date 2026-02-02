@@ -133,6 +133,7 @@ def message_dto_to_response(dto: MessageDTO) -> MessageResponse:
         content=dto.content,
         created_at=dto.created_at.isoformat(),
         citations=dto.citations,
+        metrics=dto.metrics,
     )
 
 

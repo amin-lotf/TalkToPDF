@@ -3,6 +3,7 @@
 # -----------------------------
 from talk_to_pdf.backend.app.domain.reply import ChatMessage, Chat
 from talk_to_pdf.backend.app.domain.reply.value_objects import ChatMessageCitations, CitedChunk
+from talk_to_pdf.backend.app.domain.reply.metrics import ReplyMetrics
 from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
 from talk_to_pdf.backend.app.infrastructure.db.models.reply import ChatMessageModel, ChatModel
 
@@ -65,6 +66,10 @@ def message_domain_to_model(msg: ChatMessage) -> ChatMessageModel:
             "rewritten_query": msg.citations.rewritten_query,
         }
 
+    metrics_dict = None
+    if msg.metrics:
+        metrics_dict = msg.metrics.to_dict()
+
     return ChatMessageModel(
         id=msg.id,
         chat_id=msg.chat_id,
@@ -72,6 +77,7 @@ def message_domain_to_model(msg: ChatMessage) -> ChatMessageModel:
         content=msg.content,
         created_at=msg.created_at,
         citations=citations_dict,
+        metrics=metrics_dict,
     )
 
 
@@ -99,6 +105,10 @@ def message_model_to_domain(m: ChatMessageModel) -> ChatMessage:
             rewritten_query=m.citations.get("rewritten_query"),
         )
 
+    metrics = None
+    if m.metrics:
+        metrics = ReplyMetrics.from_dict(m.metrics)
+
     return ChatMessage(
         id=m.id,
         chat_id=m.chat_id,
@@ -106,4 +116,5 @@ def message_model_to_domain(m: ChatMessageModel) -> ChatMessage:
         content=m.content,
         created_at=m.created_at,
         citations=citations,
+        metrics=metrics,
     )

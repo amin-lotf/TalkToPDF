@@ -70,6 +70,7 @@ class MessageResponse(BaseModel):
     content: str
     created_at: str
     citations: dict[str, Any] | None = None
+    metrics: dict[str, Any] | None = None
 
 
 class ListMessagesResponse(BaseModel):

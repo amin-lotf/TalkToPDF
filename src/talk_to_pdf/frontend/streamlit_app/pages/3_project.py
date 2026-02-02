@@ -372,8 +372,61 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-            # Show citations in a compact expander (collapsed by default) only if not streaming
+            # Show citations and metrics in compact expanders (collapsed by default) only if not streaming
             if not is_streaming:
+                # Display metrics if available
+                metrics_data = msg.get("metrics")
+                if metrics_data:
+                    tokens = metrics_data.get("tokens", {})
+                    prompt = tokens.get("prompt", {})
+                    latency = metrics_data.get("latency", {})
+
+                    # Create compact summary for the button label
+                    total_tokens = tokens.get("total", 0)
+                    total_latency = latency.get("total", 0)
+
+                    with st.expander(f"📊 Metrics ({total_tokens:,} tokens, {total_latency:.2f}s)", expanded=False):
+                        # Token metrics
+                        st.markdown("**🔢 Token Usage**")
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            st.markdown("**Prompt Breakdown:**")
+                            st.caption(f"• System: {prompt.get('system', 0):,}")
+                            st.caption(f"• History: {prompt.get('history', 0):,}")
+                            st.caption(f"• Rewritten Question: {prompt.get('rewritten_question', 0):,}")
+                            st.caption(f"• Context: {prompt.get('context', 0):,}")
+                            st.caption(f"• Question: {prompt.get('question', 0):,}")
+                            st.caption(f"**Total Prompt: {prompt.get('total', 0):,}**")
+
+                        with col2:
+                            st.markdown("**Summary:**")
+                            st.caption(f"• Completion: {tokens.get('completion', 0):,}")
+                            st.caption(f"**Total: {total_tokens:,}**")
+
+                        st.divider()
+
+                        # Latency metrics
+                        st.markdown("**⏱️ Latency (seconds)**")
+
+                        col1, col2, col3, col4 = st.columns(4)
+
+                        with col1:
+                            qr_latency = latency.get('query_rewriting')
+                            st.metric("Query Rewriting", f"{qr_latency:.2f}s" if qr_latency else "N/A")
+
+                        with col2:
+                            ret_latency = latency.get('retrieval')
+                            st.metric("Retrieval", f"{ret_latency:.2f}s" if ret_latency else "N/A")
+
+                        with col3:
+                            gen_latency = latency.get('reply_generation')
+                            st.metric("Reply Generation", f"{gen_latency:.2f}s" if gen_latency else "N/A")
+
+                        with col4:
+                            st.metric("Total", f"{total_latency:.2f}s")
+
                 citations_data = msg.get("citations")
                 if citations_data:
                     chunks = citations_data.get("chunks", [])
