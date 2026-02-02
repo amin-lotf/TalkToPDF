@@ -37,7 +37,10 @@ def create_context_pack_dto(
         scores:dict[UUID,float],
         embed_signature:str,
         metric:VectorMetric,
-        rewritten_query:str | None = None
+        rewritten_query:str | None = None,
+        rewrite_prompt_tokens:int = 0,
+        rewrite_completion_tokens:int = 0,
+        rewrite_latency:float | None = None,
 )->ContextPackDTO:
     context_chunks=create_context_chunk_dto(chunks,scores)
     return ContextPackDTO(
@@ -48,4 +51,7 @@ def create_context_pack_dto(
         metric=metric,
         chunks=context_chunks,
         rewritten_query=rewritten_query,
+        rewrite_prompt_tokens=rewrite_prompt_tokens,
+        rewrite_completion_tokens=rewrite_completion_tokens,
+        rewrite_latency=rewrite_latency,
     )

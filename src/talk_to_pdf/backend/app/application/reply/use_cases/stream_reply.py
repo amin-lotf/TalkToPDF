@@ -88,9 +88,10 @@ class StreamReplyUseCase:
         context = await self._ctx_builder_uc.execute(search_input)
         retrieval_latency = time.time() - retrieval_start
 
-        # Count rewritten question tokens if available
-        if context.rewritten_query:
-            rewritten_question_tokens = count_tokens(context.rewritten_query, model=self._reply_generator.llm_model)
+        # Get query rewriter metrics from context
+        # Sum of prompt + completion tokens (as requested by user)
+        rewritten_question_tokens = context.rewrite_prompt_tokens + context.rewrite_completion_tokens
+        query_rewrite_latency = context.rewrite_latency
 
         # 5) Build GenerateReplyInput
         generate_input = create_generate_answer_input(
@@ -125,7 +126,7 @@ class StreamReplyUseCase:
             )
 
             latency_metrics = LatencyMetrics(
-                query_rewriting=None,  # Query rewriting is part of retrieval in current setup
+                query_rewriting=query_rewrite_latency,
                 retrieval=retrieval_latency,
                 reply_generation=reply_generation_latency,
             )

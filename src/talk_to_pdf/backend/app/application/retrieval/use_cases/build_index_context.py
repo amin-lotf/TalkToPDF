@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any, Callable
 from uuid import UUID
 
@@ -105,7 +106,7 @@ class BuildIndexContextUseCase:
             embed_sig = embed_cfg.signature()
 
         # ----------------
-        # 2) Embed the query
+        # 2) Rewrite query and embed
         # ----------------
         await self._progress.emit(
             ProgressEvent(
@@ -113,8 +114,18 @@ class BuildIndexContextUseCase:
                 payload={"index_id": str(dto.index_id)},
             )
         )
+
+        # Rewrite query with metrics and latency tracking
+        rewrite_start = time.time()
+        from talk_to_pdf.backend.app.infrastructure.reply.query_rewriter.openai_query_rewriter import QueryRewriteResult
+        rewrite_result = await self._query_rewriter.rewrite_with_metrics(query=dto.query, history=dto.message_history)
+        rewrite_latency = time.time() - rewrite_start
+
+        rewritten_query = rewrite_result.rewritten_query
+        rewrite_prompt_tokens = rewrite_result.prompt_tokens
+        rewrite_completion_tokens = rewrite_result.completion_tokens
+
         embedder =  self._embedder_factory.create(embed_cfg)
-        rewritten_query= await self._query_rewriter.rewrite(query=dto.query,history=dto.message_history)
         vectors = await embedder.aembed_documents([rewritten_query])
         if not vectors or not vectors[0]:
             raise InvalidRetrieval("Embedding provider returned empty vector")
@@ -256,4 +267,7 @@ class BuildIndexContextUseCase:
             embed_sig,
             self._metric,
             rewritten_query=rewritten_query,
+            rewrite_prompt_tokens=rewrite_prompt_tokens,
+            rewrite_completion_tokens=rewrite_completion_tokens,
+            rewrite_latency=rewrite_latency,
         )

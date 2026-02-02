@@ -37,3 +37,7 @@ class ContextPackDTO:
     metric: VectorMetric
     chunks: list[ContextChunkDTO]
     rewritten_query: str | None = None
+    # Query rewriter metrics
+    rewrite_prompt_tokens: int = 0
+    rewrite_completion_tokens: int = 0
+    rewrite_latency: float | None = None
