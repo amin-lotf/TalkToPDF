@@ -2,6 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from talk_to_pdf.backend.app.application.common.dto import ContextChunkDTO, SearchInputDTO, ContextPackDTO
+from talk_to_pdf.backend.app.application.retrieval.value_objects import MultiQueryRewriteResult
 from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
 from talk_to_pdf.backend.app.domain.common.value_objects import Chunk
 
@@ -43,11 +44,8 @@ def create_context_pack_dto(
         embed_signature:str,
         metric:VectorMetric,
         matched_by: dict[UUID, list[int]] | None = None,
-        rewritten_query:str | None = None,
+        rewritten_results:MultiQueryRewriteResult | None = None,
         rewritten_queries: list[str] | None = None,
-        rewrite_strategy: str | None = None,
-        rewrite_prompt_tokens:int = 0,
-        rewrite_completion_tokens:int = 0,
         rewrite_latency:float | None = None,
 )->ContextPackDTO:
     context_chunks = create_context_chunk_dto(chunks, scores, matched_by=matched_by)
@@ -59,10 +57,10 @@ def create_context_pack_dto(
         embed_signature=embed_signature,
         metric=metric,
         chunks=context_chunks,
-        rewritten_query=rewritten_query,
+        rewritten_query=rewritten_results.rewritten_query,
         rewritten_queries=rewritten_queries,
-        rewrite_strategy=rewrite_strategy,
-        rewrite_prompt_tokens=rewrite_prompt_tokens,
-        rewrite_completion_tokens=rewrite_completion_tokens,
+        rewrite_strategy=rewritten_results.strategy,
+        rewrite_prompt_tokens=rewritten_results.prompt_tokens,
+        rewrite_completion_tokens=rewritten_results.completion_tokens,
         rewrite_latency=rewrite_latency,
     )

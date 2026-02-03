@@ -213,21 +213,19 @@ class BuildIndexContextUseCase:
         )
 
         if not merge_result.matches:
-            return ContextPackDTO(
-                index_id=dto.index_id,
-                project_id=dto.project_id,
-                query=dto.query,
-                original_query=dto.query,
+            return create_context_pack_dto(
+                dto,
+                chunks=[],
+                scores={},
                 embed_signature=embed_sig,
                 metric=self._metric,
-                chunks=[],
-                rewritten_query=rewrite_result.rewritten_query,
+                rewritten_results=rewrite_result,
                 rewritten_queries=rewritten_queries,
-                rewrite_strategy=rewrite_result.strategy,
-                rewrite_prompt_tokens=rewrite_result.prompt_tokens,
-                rewrite_completion_tokens=rewrite_result.completion_tokens,
                 rewrite_latency=rewrite_latency,
             )
+
+
+
 
         # ---------------------------------------
         # 4) Load chunks by ids (scoped by index_id)
@@ -384,10 +382,7 @@ class BuildIndexContextUseCase:
             embed_sig,
             self._metric,
             merge_result.matched_by,
-            rewritten_query=rewrite_result.rewritten_query,
+            rewritten_results=rewrite_result,
             rewritten_queries=rewritten_queries,
-            rewrite_strategy=rewrite_result.strategy,
-            rewrite_prompt_tokens=rewrite_result.prompt_tokens,
-            rewrite_completion_tokens=rewrite_result.completion_tokens,
             rewrite_latency=rewrite_latency,
         )
