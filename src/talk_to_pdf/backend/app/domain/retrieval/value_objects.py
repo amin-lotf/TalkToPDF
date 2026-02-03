@@ -10,6 +10,4 @@ class ChunkMatch:
     chunk_id: UUID
     chunk_index: int
     score: float  # interpretation depends on metric (similarity or negative distance)
-
-
-
+    matched_by: list[int] | None = None  # indexes of queries that retrieved this chunk

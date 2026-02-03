@@ -46,8 +46,16 @@ def to_reply_response(out: ReplyOutputDTO) -> ReplyResponse:
             index_id=out.context.index_id,
             project_id=out.context.project_id,
             query=out.context.query,
+            original_query=out.context.original_query or out.context.query,
             embed_signature=out.context.embed_signature,
             metric=str(out.context.metric.value if hasattr(out.context.metric, "value") else out.context.metric),
+            rewritten_query=out.context.rewritten_query,
+            rewritten_queries=out.context.rewritten_queries
+            or ([out.context.rewritten_query] if out.context.rewritten_query else None),
+            rewrite_strategy=out.context.rewrite_strategy,
+            rewrite_prompt_tokens=out.context.rewrite_prompt_tokens,
+            rewrite_completion_tokens=out.context.rewrite_completion_tokens,
+            rewrite_latency=out.context.rewrite_latency,
             chunks=[
                 ContextChunkResponse(
                     chunk_id=c.chunk_id,
@@ -56,6 +64,7 @@ def to_reply_response(out: ReplyOutputDTO) -> ReplyResponse:
                     score=float(c.score),
                     meta=c.meta,
                     citation=c.citation,
+                    matched_by=c.matched_by,
                 )
                 for c in out.context.chunks
             ],

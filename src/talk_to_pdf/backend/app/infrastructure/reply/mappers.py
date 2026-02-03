@@ -56,6 +56,7 @@ def message_domain_to_model(msg: ChatMessage) -> ChatMessageModel:
                     "score": chunk.score,
                     "citation": chunk.citation,
                     # Don't persist content to DB - it will be fetched when loading messages
+                    "matched_by": chunk.matched_by,
                 }
                 for chunk in msg.citations.chunks
             ],
@@ -64,6 +65,9 @@ def message_domain_to_model(msg: ChatMessage) -> ChatMessageModel:
             "prompt_version": msg.citations.prompt_version,
             "model": msg.citations.model,
             "rewritten_query": msg.citations.rewritten_query,
+            "rewritten_queries": msg.citations.rewritten_queries,
+            "rewrite_strategy": msg.citations.rewrite_strategy,
+            "original_query": msg.citations.original_query,
         }
 
     metrics_dict = None
@@ -95,6 +99,7 @@ def message_model_to_domain(m: ChatMessageModel) -> ChatMessage:
                     score=chunk["score"],
                     citation=chunk["citation"],
                     content=chunk.get("content"),  # Content will be None from DB, populated by use case
+                    matched_by=chunk.get("matched_by"),
                 )
                 for chunk in m.citations.get("chunks", [])
             ],
@@ -103,6 +108,9 @@ def message_model_to_domain(m: ChatMessageModel) -> ChatMessage:
             prompt_version=m.citations.get("prompt_version"),
             model=m.citations.get("model"),
             rewritten_query=m.citations.get("rewritten_query"),
+            rewritten_queries=m.citations.get("rewritten_queries"),
+            rewrite_strategy=m.citations.get("rewrite_strategy"),
+            original_query=m.citations.get("original_query"),
         )
 
     metrics = None

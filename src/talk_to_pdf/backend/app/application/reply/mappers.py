@@ -74,6 +74,7 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
                     "score": chunk.score,
                     "citation": chunk.citation,
                     "content": chunk.content,
+                    "matched_by": chunk.matched_by,
                 }
                 for chunk in msg.citations.chunks
             ],
@@ -82,6 +83,9 @@ def message_to_dto(msg: ChatMessage) -> MessageDTO:
             "prompt_version": msg.citations.prompt_version,
             "model": msg.citations.model,
             "rewritten_query": msg.citations.rewritten_query,
+            "rewritten_queries": msg.citations.rewritten_queries,
+            "rewrite_strategy": msg.citations.rewrite_strategy,
+            "original_query": msg.citations.original_query,
         }
 
     metrics_dict = None
@@ -134,6 +138,7 @@ def create_citations_from_context(
                 chunk_id=chunk.chunk_id,
                 score=chunk.score,
                 citation=chunk.citation or {},
+                matched_by=chunk.matched_by,
             )
             for chunk in context.chunks
         ],
@@ -142,6 +147,9 @@ def create_citations_from_context(
         prompt_version=prompt_version,
         model=model,
         rewritten_query=context.rewritten_query,
+        rewritten_queries=context.rewritten_queries,
+        rewrite_strategy=context.rewrite_strategy,
+        original_query=context.original_query or context.query,
     )
 
 

@@ -67,7 +67,7 @@ class GetChatMessagesUseCase:
                         rerank_signature=msg.citations.rerank_signature,
                         prompt_version=msg.citations.prompt_version,
                         model=msg.citations.model,
-                        rewritten_query=msg.citations.rewritten_query,
+                        rewritten_query=msg.citations.rewritten_queries,
                     )
 
                     # Create new message with updated citations (dataclass is frozen)

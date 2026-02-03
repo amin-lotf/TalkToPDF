@@ -81,9 +81,13 @@ class ReplyMetrics:
     @classmethod
     def from_dict(cls, data: dict) -> ReplyMetrics:
         """Create from dictionary."""
-        tokens_data = data.get("tokens", {})
-        prompt_data = tokens_data.get("prompt", {})
-        latency_data = data.get("latency", {})
+        if not isinstance(data, dict):
+            # Defensive: fallback to empty metrics when bad payload types are encountered.
+            data = {}
+
+        tokens_data = data.get("tokens", {}) if isinstance(data.get("tokens"), dict) else {}
+        prompt_data = tokens_data.get("prompt", {}) if isinstance(tokens_data.get("prompt"), dict) else {}
+        latency_data = data.get("latency", {}) if isinstance(data.get("latency"), dict) else {}
 
         return cls(
             prompt_tokens=TokenMetrics(

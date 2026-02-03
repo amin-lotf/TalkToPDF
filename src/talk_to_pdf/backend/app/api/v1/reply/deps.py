@@ -12,6 +12,7 @@ from talk_to_pdf.backend.app.application.reply.use_cases.list_chats import ListC
 from talk_to_pdf.backend.app.application.reply.use_cases.delete_chat import DeleteChatUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.get_chat_messages import GetChatMessagesUseCase
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
+from talk_to_pdf.backend.app.application.retrieval.mergers import DeterministicRetrievalResultMerger
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.core.deps import get_uow_factory, get_reply_generation_config, get_query_rewrite_config
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
@@ -57,7 +58,8 @@ def get_build_index_context_use_case(
         embedder_factory=embedding_factory,
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
-        query_rewriter=query_rewriter
+        query_rewriter=query_rewriter,
+        retrieval_merger=DeterministicRetrievalResultMerger(),
     )
 
 def get_get_chat_messages_use_case(
@@ -107,5 +109,4 @@ def get_delete_chat_use_case(
     uow_factory: Annotated[Callable[[], UnitOfWork], Depends(get_uow_factory)]
 ) -> DeleteChatUseCase:
     return DeleteChatUseCase(uow_factory=uow_factory)
-
 

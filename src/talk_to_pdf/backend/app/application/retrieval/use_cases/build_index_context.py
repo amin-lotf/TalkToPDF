@@ -1,7 +1,6 @@
 # talk_to_pdf/backend/app/application/retrieval/use_cases/build_index_context.py
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Any, Callable
 from uuid import UUID
@@ -9,7 +8,7 @@ from uuid import UUID
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO, ContextChunkDTO
 from talk_to_pdf.backend.app.application.common.progress import ProgressEvent, ProgressSink
 from talk_to_pdf.backend.app.application.common.interfaces import EmbedderFactory
-from talk_to_pdf.backend.app.application.retrieval.interfaces import Reranker, QueryRewriter
+from talk_to_pdf.backend.app.application.retrieval.interfaces import Reranker, QueryRewriter, RetrievalResultMerger
 from talk_to_pdf.backend.app.application.retrieval.mappers import create_context_pack_dto
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
@@ -62,7 +61,8 @@ class BuildIndexContextUseCase:
         reranker: Reranker | None = None,
         progress: ProgressSink | None = None,
         metric: VectorMetric = VectorMetric.COSINE,
-        query_rewriter:QueryRewriter,
+        query_rewriter: QueryRewriter,
+        retrieval_merger: RetrievalResultMerger,
         # guardrails to avoid abuse / accidental huge loads
         max_top_k: int,
         max_top_n: int,
@@ -73,6 +73,7 @@ class BuildIndexContextUseCase:
         self._progress: ProgressSink = progress or NullProgressSink()
         self._metric = metric
         self._query_rewriter = query_rewriter
+        self._retrieval_merger = retrieval_merger
         self._max_top_k = max_top_k
         self._max_top_n = max_top_n
 
@@ -106,35 +107,53 @@ class BuildIndexContextUseCase:
             embed_sig = embed_cfg.signature()
 
         # ----------------
-        # 2) Rewrite query and embed
+        # 2) Rewrite query into multiple sub-queries and embed
         # ----------------
+        rewrite_start = time.time()
+        rewrite_result = await self._query_rewriter.rewrite_queries_with_metrics(
+            query=dto.query, history=dto.message_history
+        )
+        rewrite_latency = time.time() - rewrite_start
+
+        rewritten_queries = [q for q in rewrite_result.queries if not _is_blank(q)]
+        if not rewritten_queries:
+            rewritten_queries = [(dto.query or "").strip()]
+
+
         await self._progress.emit(
             ProgressEvent(
-                name="embed_query_start",
-                payload={"index_id": str(dto.index_id)},
+                name="multi_rewrite_done",
+                payload={
+                    "queries": rewritten_queries,
+                    "prompt_tokens": rewrite_result.prompt_tokens,
+                    "completion_tokens": rewrite_result.completion_tokens,
+                    "latency": rewrite_latency,
+                },
             )
         )
 
-        # Rewrite query with metrics and latency tracking
-        rewrite_start = time.time()
-        from talk_to_pdf.backend.app.infrastructure.reply.query_rewriter.openai_query_rewriter import QueryRewriteResult
-        rewrite_result = await self._query_rewriter.rewrite_with_metrics(query=dto.query, history=dto.message_history)
-        rewrite_latency = time.time() - rewrite_start
+        embedder = self._embedder_factory.create(embed_cfg)
+        await self._progress.emit(
+            ProgressEvent(
+                name="embed_queries_start",
+                payload={"index_id": str(dto.index_id), "queries": len(rewritten_queries)},
+            )
+        )
 
-        rewritten_query = rewrite_result.rewritten_query
-        rewrite_prompt_tokens = rewrite_result.prompt_tokens
-        rewrite_completion_tokens = rewrite_result.completion_tokens
+        vectors = await embedder.aembed_documents(rewritten_queries)
+        if not vectors or len(vectors) != len(rewritten_queries):
+            raise InvalidRetrieval("Embedding provider returned empty vectors")
 
-        embedder =  self._embedder_factory.create(embed_cfg)
-        vectors = await embedder.aembed_documents([rewritten_query])
-        if not vectors or not vectors[0]:
-            raise InvalidRetrieval("Embedding provider returned empty vector")
-        qvec = Vector.from_list(vectors[0])
+        query_vectors: list[Vector] = []
+        for i, vec in enumerate(vectors):
+            if not vec:
+                raise InvalidRetrieval(f"Embedding provider returned empty vector for query #{i}")
+            query_vectors.append(Vector.from_list(vec))
 
         await self._progress.emit(
             ProgressEvent(
-                name="embed_query_done",
-                payload={"dim": qvec.dim},
+                name="embed_queries_done",
+                payload={"dim": query_vectors[0].dim if query_vectors else None, "count": len(query_vectors)},
             )
         )
 
@@ -147,47 +166,76 @@ class BuildIndexContextUseCase:
                 payload={
                     "index_id": str(dto.index_id),
                     "top_k": top_k,
+                    "queries": len(query_vectors),
                     "embed_signature": embed_sig,
                     "metric": self._metric.value if hasattr(self._metric, "value") else str(self._metric),
                 },
             )
         )
 
+        per_query_matches: list[list[ChunkMatch]] = []
         async with uow:
-            matches: list[ChunkMatch] = await uow.chunk_search_repo.similarity_search(
-                query=qvec,
-                top_k=top_k,
-                embed_signature=embed_sig,
-                index_id=dto.index_id,
-                metric=self._metric,
-            )
+            for idx, qvec in enumerate(query_vectors):
+                matches = await uow.chunk_search_repo.similarity_search(
+                    query=qvec,
+                    top_k=top_k,
+                    embed_signature=embed_sig,
+                    index_id=dto.index_id,
+                    metric=self._metric,
+                )
+                per_query_matches.append(matches)
+                await self._progress.emit(
+                    ProgressEvent(
+                        name="vector_search_done",
+                        payload={
+                            "query_index": idx,
+                            "top_k": top_k,
+                            "returned": len(matches),
+                        },
+                    )
+                )
+
+        merge_result = await self._retrieval_merger.merge(
+            query_texts=rewritten_queries,
+            per_query_matches=per_query_matches,
+            top_k=top_k,
+            top_n=top_n,
+            original_query=dto.query,
+        )
 
         await self._progress.emit(
             ProgressEvent(
-                name="vector_search_done",
-                payload={"returned": len(matches)},
+                name="merge_done",
+                payload={
+                    "total_candidates": merge_result.total_candidates,
+                    "unique_candidates": merge_result.unique_candidates,
+                    "selected": len(merge_result.matches),
+                },
             )
         )
 
-        if not matches:
+        if not merge_result.matches:
             return ContextPackDTO(
                 index_id=dto.index_id,
                 project_id=dto.project_id,
                 query=dto.query,
+                original_query=dto.query,
                 embed_signature=embed_sig,
                 metric=self._metric,
                 chunks=[],
-                rewritten_query=rewritten_query,
+                rewritten_query=rewrite_result.rewritten_query,
+                rewritten_queries=rewritten_queries,
+                rewrite_strategy=rewrite_result.strategy,
+                rewrite_prompt_tokens=rewrite_result.prompt_tokens,
+                rewrite_completion_tokens=rewrite_result.completion_tokens,
+                rewrite_latency=rewrite_latency,
             )
 
         # ---------------------------------------
         # 4) Load chunks by ids (scoped by index_id)
         # ---------------------------------------
-        match_ids: list[UUID] = [m.chunk_id for m in matches]  # type: ignore[attr-defined]
-        score_by_id: dict[UUID, float] = {
-            m.chunk_id: float(m.score)  # type: ignore[attr-defined]
-            for m in matches
-        }
+        match_ids: list[UUID] = [m.chunk_id for m in merge_result.matches]
+        score_by_id: dict[UUID, float] = merge_result.score_by_id
 
         await self._progress.emit(
             ProgressEvent(
@@ -229,31 +277,18 @@ class BuildIndexContextUseCase:
                     },
                 )
             )
-            try:
-                # Use case controls timeboxing (my recommendation)
-                final_chunks = await asyncio.wait_for(
-                    self._reranker.rank(dto.query, ordered_chunks),
-                    timeout=max(0.0, float(dto.rerank_timeout_s)),
-                )
-                reranked = True
-                # Safety: ensure returned chunks are subset of candidates
-                allowed = {c.id for c in ordered_chunks}
-                final_chunks = [c for c in final_chunks if c.id in allowed]
-                if not final_chunks:
-                    final_chunks = ordered_chunks
-                    reranked = False
-            except asyncio.TimeoutError:
-                final_chunks = ordered_chunks
-                reranked = False
-            except Exception:
-                # Don’t fail the request because rerank died; just fallback.
-                final_chunks = ordered_chunks
-                reranked = False
+
+            final_chunks, reranked = await self._retrieval_merger.rerank(
+                original_query=dto.query,
+                candidates=ordered_chunks,
+                reranker=self._reranker,
+                timeout_s=float(dto.rerank_timeout_s),
+            )
 
             await self._progress.emit(
                 ProgressEvent(
                     name="rerank_done",
-                    payload={"reranked": reranked},
+                    payload={"reranked": reranked, "candidates": len(ordered_chunks)},
                 )
             )
 
@@ -266,8 +301,11 @@ class BuildIndexContextUseCase:
             score_by_id,
             embed_sig,
             self._metric,
-            rewritten_query=rewritten_query,
-            rewrite_prompt_tokens=rewrite_prompt_tokens,
-            rewrite_completion_tokens=rewrite_completion_tokens,
+            merge_result.matched_by,
+            rewritten_query=rewrite_result.rewritten_query,
+            rewritten_queries=rewritten_queries,
+            rewrite_strategy=rewrite_result.strategy,
+            rewrite_prompt_tokens=rewrite_result.prompt_tokens,
+            rewrite_completion_tokens=rewrite_result.completion_tokens,
             rewrite_latency=rewrite_latency,
         )

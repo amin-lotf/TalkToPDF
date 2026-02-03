@@ -13,7 +13,9 @@ from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO
+from talk_to_pdf.backend.app.application.retrieval.mergers import DeterministicRetrievalResultMerger
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
+from talk_to_pdf.backend.app.application.retrieval.value_objects import MultiQueryRewriteResult
 from talk_to_pdf.backend.app.application.projects.dto import CreateProjectInputDTO
 from talk_to_pdf.backend.app.application.projects.use_cases.create_project import CreateProjectUseCase
 from talk_to_pdf.backend.app.application.indexing.dto import StartIndexingInputDTO
@@ -81,6 +83,21 @@ class SlowReranker:
     async def rank(self, query: str, candidates: list[Chunk]) -> list[Chunk]:
         await asyncio.sleep(self.delay_s)
         return list(reversed(candidates))
+
+
+@dataclass
+class IdentityMultiQueryRewriter:
+    fixed: list[str] | None = None
+
+    async def rewrite(self, *, query: str, history) -> str:
+        return (self.fixed or [query])[0]
+
+    async def rewrite_queries_with_metrics(self, *, query: str, history) -> MultiQueryRewriteResult:
+        queries = self.fixed or [query]
+        return MultiQueryRewriteResult(queries=queries, prompt_tokens=0, completion_tokens=0)
+
+    async def rewrite_with_metrics(self, *, query: str, history) -> MultiQueryRewriteResult:
+        return await self.rewrite_queries_with_metrics(query=query, history=history)
 
 
 # ---------------------------
@@ -212,6 +229,8 @@ async def test_build_index_context_blank_query_raises(uow_factory):
     uc = BuildIndexContextUseCase(
         uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0, 0.0, 0.0]),
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -233,6 +252,8 @@ async def test_build_index_context_index_not_found_or_forbidden_raises(uow_facto
     uc = BuildIndexContextUseCase(
         uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0, 0.0, 0.0]),
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -293,6 +314,8 @@ async def test_build_index_context_index_not_ready_raises(session, uow, uow_fact
     uc = BuildIndexContextUseCase(
         uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=[1.0] + [0.0] * (embed_cfg.dimensions - 1)),
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -333,6 +356,8 @@ async def test_build_index_context_happy_path_returns_top_n_and_embed_signature(
         uow_factory=uow_factory,
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         metric=VectorMetric.COSINE,
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -385,6 +410,8 @@ async def test_build_index_context_rerank_reorders_but_keeps_similarity_scores(
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         reranker=ReverseReranker(),
         metric=VectorMetric.COSINE,
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -433,6 +460,8 @@ async def test_build_index_context_rerank_timeout_falls_back_to_similarity_order
         embedder_factory=FixedEmbedderFactory(vec=query_vec),
         reranker=SlowReranker(delay_s=0.5),
         metric=VectorMetric.COSINE,
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
     )
@@ -469,6 +498,8 @@ async def test_build_index_context_embedder_returns_empty_vector_raises_invalid_
     uc = BuildIndexContextUseCase(
         uow_factory=uow_factory,
         embedder_factory=EmptyFactory(),
+        query_rewriter=IdentityMultiQueryRewriter(),
+        retrieval_merger=DeterministicRetrievalResultMerger(),
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N
     )

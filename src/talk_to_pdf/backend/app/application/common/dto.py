@@ -26,6 +26,7 @@ class ContextChunkDTO:
     score: float
     meta: dict[str, Any] | None
     citation: dict[str, Any] | None  # keep flexible (page, doc_id, offsets, etc.)
+    matched_by: list[int] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +37,10 @@ class ContextPackDTO:
     embed_signature: str
     metric: VectorMetric
     chunks: list[ContextChunkDTO]
+    original_query: str | None = None
     rewritten_query: str | None = None
+    rewritten_queries: list[str] | None = None
+    rewrite_strategy: str | None = None
     # Query rewriter metrics
     rewrite_prompt_tokens: int = 0
     rewrite_completion_tokens: int = 0

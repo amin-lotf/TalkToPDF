@@ -22,14 +22,22 @@ class ContextChunkResponse(BaseModel):
     score: float
     meta: dict[str, Any] | None = None
     citation: dict[str, Any] | None = None
+    matched_by: list[int] | None = None
 
 
 class ContextPackResponse(BaseModel):
     index_id: UUID
     project_id: UUID
     query: str
+    original_query: str | None = None
     embed_signature: str
     metric: str
+    rewritten_query: str | None = None
+    rewritten_queries: list[str] | None = None
+    rewrite_strategy: str | None = None
+    rewrite_prompt_tokens: int | None = None
+    rewrite_completion_tokens: int | None = None
+    rewrite_latency: float | None = None
     chunks: list[ContextChunkResponse]
 
 

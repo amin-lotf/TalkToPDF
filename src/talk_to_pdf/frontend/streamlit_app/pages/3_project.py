@@ -433,10 +433,26 @@ else:
                     num_sources = len(chunks)
 
                     with st.expander(f"📎 {num_sources} Source{'s' if num_sources != 1 else ''}", expanded=False):
-                        # Display rewritten query if available
-                        rewritten_query = citations_data.get('rewritten_query')
-                        if rewritten_query:
-                            st.markdown(f"**🔄 Rewritten Query:** _{rewritten_query}_")
+                        # Display generated sub-queries
+                        rewritten_queries = citations_data.get('rewritten_queries') or []
+                        if isinstance(rewritten_queries, str):
+                            rewritten_queries = [rewritten_queries]
+                        single_rewrite = citations_data.get('rewritten_query')
+                        original_query = citations_data.get('original_query')
+
+                        queries_to_show = rewritten_queries or ([single_rewrite] if single_rewrite else [])
+                        if not queries_to_show and original_query:
+                            queries_to_show = [original_query]
+
+                        if queries_to_show:
+                            st.markdown("**🔄 Retrieval Queries:**")
+                            for idx, rq in enumerate(queries_to_show, 1):
+                                st.caption(f"{idx}. {rq}")
+
+                            strategy = citations_data.get("rewrite_strategy")
+                            if strategy:
+                                st.caption(f"_Strategy: {strategy}_")
+
                             st.divider()
 
                         # Display metadata header
@@ -566,4 +582,3 @@ else:
 
                 except ApiError as e:
                     st.error(str(e))
-

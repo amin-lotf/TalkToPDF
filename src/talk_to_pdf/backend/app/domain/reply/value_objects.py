@@ -15,6 +15,7 @@ class CitedChunk:
     score: float | None
     citation: dict[str, Any]  # must include doc_id + page/offsets
     content: str | None = None  # chunk text content
+    matched_by: list[int] | None = None  # which rewrite indexes retrieved this chunk
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +38,9 @@ class ChatMessageCitations:
     prompt_version: str | None
     model: str | None
     rewritten_query: str | None = None
+    rewritten_queries: list[str] | None = None
+    rewrite_strategy: str | None = None
+    original_query: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
