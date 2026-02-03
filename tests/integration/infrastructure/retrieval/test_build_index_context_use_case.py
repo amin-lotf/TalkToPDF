@@ -2,18 +2,18 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO
-from talk_to_pdf.backend.app.application.retrieval.mergers import DeterministicRetrievalResultMerger
+from talk_to_pdf.backend.app.infrastructure.retrieval.merger.mergers import DeterministicRetrievalResultMerger
 from talk_to_pdf.backend.app.application.retrieval.use_cases.build_index_context import BuildIndexContextUseCase
 from talk_to_pdf.backend.app.application.retrieval.value_objects import MultiQueryRewriteResult
 from talk_to_pdf.backend.app.application.projects.dto import CreateProjectInputDTO
@@ -27,17 +27,14 @@ from talk_to_pdf.backend.app.domain.retrieval.errors import (
     InvalidQuery,
     IndexNotFoundOrForbidden,
     IndexNotReady,
-    InvalidRetrieval,
 )
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
 from talk_to_pdf.backend.app.infrastructure.db.models import (
     DocumentIndexModel,
-    ChunkEmbeddingModel,
 )
 from talk_to_pdf.backend.app.infrastructure.indexing.service import IndexingWorkerService, WorkerDeps
-from talk_to_pdf.backend.app.infrastructure.indexing.chunkers.block_chunker import DefaultBlockChunker
 from tests.unit.fakes.indexing_worker_deps import FakePdfToXmlConverter, FakeBlockExtractor, FakeBlockChunker
 
 pytestmark = pytest.mark.asyncio

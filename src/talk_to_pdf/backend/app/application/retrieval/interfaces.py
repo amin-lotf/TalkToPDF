@@ -2,11 +2,18 @@ from typing import Protocol
 
 from talk_to_pdf.backend.app.application.retrieval.value_objects import MultiQueryRewriteResult, MergeResult
 from talk_to_pdf.backend.app.domain.common.value_objects import Chunk, ChatTurn
-from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
+from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch, RerankContext
 
 
 class Reranker(Protocol):
-    async def rank(self, query: str, candidates: list[Chunk]) -> list[Chunk]: ...
+    async def rank(
+            self,
+            query: str,
+            candidates: list[Chunk],
+            *,
+            top_n: int | None = None,
+            ctx: RerankContext | None = None,
+    ) -> list[Chunk]: ...
 
 
 class QueryRewriter(Protocol):
@@ -28,15 +35,5 @@ class RetrievalResultMerger(Protocol):
         query_texts: list[str],
         per_query_matches: list[list[ChunkMatch]],
         top_k: int,
-        top_n: int,
         original_query: str,
     ) -> MergeResult: ...
-
-    async def rerank(
-        self,
-        *,
-        original_query: str,
-        candidates: list[Chunk],
-        reranker: Reranker | None,
-        timeout_s: float,
-    ) -> tuple[list[Chunk], bool]: ...

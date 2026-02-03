@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     QUERY_REWRITER_MAX_TURN: int = 6
     QUERY_REWRITER_MAX_HISTORY_CHARS: int = 6000
     GROBID_URL: str = "http://localhost:8070"
+    RERANKER_PROVIDER: str = 'xxx'
+    RERANKER_TEMPERATURE: float = 0.0
+    RERANKER_MODEL: str = 'xxx'
+
 
 
 settings = Settings()

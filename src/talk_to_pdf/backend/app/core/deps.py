@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from talk_to_pdf.backend.app.application.indexing.interfaces import IndexingRunner
 from talk_to_pdf.backend.app.core.config import settings
 from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
-from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig, ReplyGenerationConfig, QueryRewriteConfig
+from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig, ReplyGenerationConfig, QueryRewriteConfig, \
+    RerankerConfig
 from talk_to_pdf.backend.app.infrastructure.db.session import SessionLocal
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
@@ -55,6 +56,13 @@ def get_reply_generation_config()->ReplyGenerationConfig:
         temperature=settings.REPLY_TEMPERATURE,
         max_output_tokens=settings.REPLY_MAX_OUTPUT_TOKENS,
         max_context_chars=settings.REPLY_MAX_CONTEXT_CHARS,
+    )
+
+def get_reranker_config()->RerankerConfig:
+    return RerankerConfig(
+        provider=settings.RERANKER_PROVIDER,
+        model=settings.RERANKER_MODEL,
+        temperature=settings.RERANKER_TEMPERATURE,
     )
 
 def get_query_rewrite_config()->QueryRewriteConfig:

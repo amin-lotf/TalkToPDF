@@ -77,17 +77,13 @@ class EmbedConfig:
 class RerankerConfig:
     provider: str           # "openai", "noop", "cross_encoder"
     model: str              # "gpt-4o-mini", "bge-reranker"
-    top_n: int
     temperature: float = 0.0
-    max_chars_per_chunk: int = 900
 
     def to_dict(self) -> dict:
         return {
             "provider": self.provider,
             "model": self.model,
-            "top_n": int(self.top_n),
             "temperature": float(self.temperature),
-            "max_chars_per_chunk": int(self.max_chars_per_chunk),
         }
 
     @classmethod
@@ -95,9 +91,7 @@ class RerankerConfig:
         allowed = {
             "provider",
             "model",
-            "top_n",
             "temperature",
-            "max_chars_per_chunk",
         }
         unknown = set(d.keys()) - allowed
         if unknown:
@@ -106,9 +100,7 @@ class RerankerConfig:
         return cls(
             provider=str(d["provider"]),
             model=str(d["model"]),
-            top_n=int(d["top_n"]),
             temperature=float(d.get("temperature", 0.0)),
-            max_chars_per_chunk=int(d.get("max_chars_per_chunk", 900)),
         )
 
     def canonical_json(self) -> str:

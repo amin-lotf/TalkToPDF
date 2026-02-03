@@ -5,6 +5,8 @@ import time
 from typing import Any, Callable
 from uuid import UUID
 
+import anyio
+
 from talk_to_pdf.backend.app.application.common.dto import SearchInputDTO, ContextPackDTO, ContextChunkDTO
 from talk_to_pdf.backend.app.application.common.progress import ProgressEvent, ProgressSink
 from talk_to_pdf.backend.app.application.common.interfaces import EmbedderFactory
@@ -16,10 +18,7 @@ from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
 from talk_to_pdf.backend.app.domain.retrieval.errors import InvalidQuery, IndexNotFoundOrForbidden, IndexNotReady, \
     InvalidRetrieval
-from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
-
-
-
+from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch, RerankContext
 
 
 class NullProgressSink:
@@ -199,7 +198,6 @@ class BuildIndexContextUseCase:
             query_texts=rewritten_queries,
             per_query_matches=per_query_matches,
             top_k=top_k,
-            top_n=top_n,
             original_query=dto.query,
         )
 
@@ -262,33 +260,117 @@ class BuildIndexContextUseCase:
         )
 
         # ----------------
-        # 5) Optional rerank
+        # 5) Optional rerank (fail-open + timeout)
         # ----------------
         final_chunks: list[Chunk] = ordered_chunks
         reranked = False
+        rerank_latency = 0.0
+        rerank_timed_out = False
+        rerank_error: str | None = None
 
-        if self._reranker and len(ordered_chunks) > 1:
+        # Safety clamps
+        timeout_s = float(getattr(dto, "rerank_timeout_s", 0.0) or 0.0)
+        if timeout_s < 0:
+            timeout_s = 0.0
+
+        # Never ask reranker for more than you will return / more than you have.
+        rerank_top_n = min(top_n, len(ordered_chunks))
+
+        if (
+                self._reranker
+                and len(ordered_chunks) > 1
+                and rerank_top_n > 0
+                and timeout_s > 0.0
+        ):
             await self._progress.emit(
                 ProgressEvent(
                     name="rerank_start",
                     payload={
                         "candidates": len(ordered_chunks),
-                        "timeout_s": float(dto.rerank_timeout_s),
+                        "top_n": rerank_top_n,
+                        "timeout_s": timeout_s,
                     },
                 )
             )
 
-            final_chunks, reranked = await self._retrieval_merger.rerank(
+            # Build context for reranker (optional)
+            # If you don't have candidate signals, keep ctx minimal.
+            ctx = RerankContext(
                 original_query=dto.query,
-                candidates=ordered_chunks,
-                reranker=self._reranker,
-                timeout_s=float(dto.rerank_timeout_s),
+                sub_queries=rewritten_queries,
+                candidate_signals=getattr(merge_result, "candidate_signals", None),  # optional
             )
+
+            t0 = time.time()
+            try:
+                # fail_after raises TimeoutError if exceeded
+                with anyio.fail_after(timeout_s):
+                    ranked_chunks = await self._reranker.rank(
+                        query=dto.query,  # original intent anchor
+                        candidates=ordered_chunks,
+                        top_n=rerank_top_n,  # your new param
+                        ctx=ctx,
+                    )
+
+                rerank_latency = time.time() - t0
+
+                # Defensive: keep only chunks we know, preserve reranker order
+                # (If reranker returns garbage/missing, your reranker already fail-opens,
+                # but keep a final guard here.)
+                if ranked_chunks:
+                    # Ensure uniqueness + stable
+                    seen: set[UUID] = set()
+                    cleaned: list[Chunk] = []
+                    for c in ranked_chunks:
+                        if c.id not in seen:
+                            cleaned.append(c)
+                            seen.add(c.id)
+
+                    # Ensure we didn’t lose anything critical (optional)
+                    # Append missing in original order
+                    missing = [c for c in ordered_chunks if c.id not in seen]
+                    final_chunks = cleaned + missing
+                    reranked = True
+                else:
+                    final_chunks = ordered_chunks
+
+            except TimeoutError:
+                rerank_latency = time.time() - t0
+                rerank_timed_out = True
+                final_chunks = ordered_chunks  # fail-open
+            except Exception as e:
+                rerank_latency = time.time() - t0
+                rerank_error = f"{type(e).__name__}: {e}"
+                final_chunks = ordered_chunks  # fail-open
 
             await self._progress.emit(
                 ProgressEvent(
                     name="rerank_done",
-                    payload={"reranked": reranked, "candidates": len(ordered_chunks)},
+                    payload={
+                        "reranked": reranked,
+                        "timed_out": rerank_timed_out,
+                        "error": rerank_error,
+                        "latency": rerank_latency,
+                        "returned": min(len(final_chunks), rerank_top_n),
+                    },
+                )
+            )
+        else:
+            # If reranker is disabled or timeout is 0, emit a lightweight event if you want observability.
+            await self._progress.emit(
+                ProgressEvent(
+                    name="rerank_done",
+                    payload={
+                        "reranked": False,
+                        "skipped": True,
+                        "reason": (
+                            "no_reranker"
+                            if not self._reranker
+                            else "not_enough_candidates"
+                            if len(ordered_chunks) <= 1
+                            else "timeout_disabled"
+                        ),
+                    },
                 )
             )
 

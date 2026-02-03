@@ -17,7 +17,7 @@ class _AggregatedMatch:
     matched_by: set[int]
 
 
-class DeterministicRetrievalResultMerger(RetrievalResultMerger):
+class DeterministicRetrievalResultMerger:
     """
     Merge + dedupe retrieval outputs across multiple query rewrites.
 
@@ -34,7 +34,6 @@ class DeterministicRetrievalResultMerger(RetrievalResultMerger):
         query_texts: list[str],
         per_query_matches: list[list[ChunkMatch]],
         top_k: int,
-        top_n: int,  # kept to satisfy interface; top_k guards the candidate pool
         original_query: str,
     ) -> MergeResult:
         _ = (query_texts, original_query)
@@ -74,7 +73,7 @@ class DeterministicRetrievalResultMerger(RetrievalResultMerger):
             )
 
         merged_matches.sort(key=lambda m: m.score, reverse=True)
-        selected = merged_matches[: max(top_k, top_n)]
+        selected = merged_matches[: top_k]
 
         score_by_id = {m.chunk_id: float(m.score) for m in selected}
         matched_by = {m.chunk_id: list(m.matched_by or []) for m in selected}
@@ -86,32 +85,3 @@ class DeterministicRetrievalResultMerger(RetrievalResultMerger):
             total_candidates=total_candidates,
             unique_candidates=len(aggregated),
         )
-
-    async def rerank(
-        self,
-        *,
-        original_query: str,
-        candidates: list[Chunk],
-        reranker: Reranker | None,
-        timeout_s: float,
-    ) -> tuple[list[Chunk], bool]:
-        """
-        Apply optional reranker with timeout and safe fallback.
-        """
-        if not reranker or len(candidates) <= 1:
-            return candidates, False
-
-        try:
-            reranked = await asyncio.wait_for(
-                reranker.rank(original_query, candidates),
-                timeout=max(0.0, float(timeout_s)),
-            )
-            allowed = {c.id for c in candidates}
-            reranked = [c for c in reranked if c.id in allowed]
-            if not reranked:
-                return candidates, False
-            return reranked, True
-        except asyncio.TimeoutError:
-            return candidates, False
-        except Exception:
-            return candidates, False
