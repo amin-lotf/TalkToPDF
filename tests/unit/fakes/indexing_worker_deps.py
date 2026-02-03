@@ -6,6 +6,7 @@ from typing import Any, AsyncContextManager
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession  # only for typing; not actually used
+from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
 
 
 @dataclass
@@ -27,17 +28,53 @@ class FakeSessionContext(AsyncContextManager[FakeSession]):
         return None
 
 
-class FakeTextExtractor:
-    def __init__(self, *, text: str | None = "hello world", raise_exc: Exception | None = None) -> None:
-        self._text = text
+class FakePdfToXmlConverter:
+    def __init__(self, *, xml: str = "<TEI></TEI>", raise_exc: Exception | None = None) -> None:
+        self._xml = xml
         self._exc = raise_exc
         self.called_with: list[bytes] = []
 
-    def extract(self, *, content: bytes) -> str:
+    def convert(self, *, content: bytes) -> str:
         self.called_with.append(content)
         if self._exc:
             raise self._exc
-        return self._text or ""
+        return self._xml
+
+
+class FakeBlockExtractor:
+    def __init__(self, *, blocks: list[Block] | None = None, raise_exc: Exception | None = None) -> None:
+        self._blocks = blocks or [
+            Block(
+                text="hello world",
+                meta={"div_index": 0, "kind": "paragraph", "head": None, "xml_id": None, "targets": []},
+            )
+        ]
+        self._exc = raise_exc
+        self.called_with: list[str] = []
+
+    def extract(self, *, xml: str) -> list[Block]:
+        self.called_with.append(xml)
+        if self._exc:
+            raise self._exc
+        return list(self._blocks)
+
+
+class FakeBlockChunker:
+    def __init__(self, *, chunks: list[ChunkDraft] | None = None) -> None:
+        self._chunks = chunks
+
+    def chunk(self, *, blocks: list[Block]) -> list[ChunkDraft]:
+        if self._chunks is not None:
+            return list(self._chunks)
+        text = "\n\n".join(b.text for b in blocks if b.text)
+        return [
+            ChunkDraft(
+                chunk_index=0,
+                blocks=list(blocks),
+                text=text,
+                meta={"block_count": len(blocks)},
+            )
+        ]
 
 
 class FakeEmbedder:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
+from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
 
 
 class IndexingRunner(Protocol):
@@ -14,11 +14,15 @@ class IndexingRunner(Protocol):
     async def stop(self, *, index_id: UUID) -> None:
         ...
 
-class TextExtractor(Protocol):
-    def extract(self, *, content: bytes) -> str: ...
+
+class PdfToXmlConverter(Protocol):
+    def convert(self, *, content: bytes) -> str: ...
 
 
-class Chunker(Protocol):
-    def chunk(self, *,text: str) -> list[ChunkDraft]: ...
+class BlockExtractor(Protocol):
+    def extract(self, *, xml: str) -> list[Block]: ...
 
+
+class BlockChunker(Protocol):
+    def chunk(self, *, blocks: list[Block]) -> list[ChunkDraft]: ...
 

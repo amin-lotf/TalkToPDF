@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Protocol
+from typing import List
 
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft
+from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
 
 
 
@@ -150,7 +150,8 @@ class ParagraphChunker:
     overlap: int = 1
     long_block_overlap_chars: int = 150  # overlap when we split a giant paragraph
 
-    def chunk(self, *, text: str) -> list[ChunkDraft]:
+    def chunk(self, *, blocks: list[Block]) -> list[ChunkDraft]:
+        text = "\n\n".join(b.text for b in blocks if b.text)
         normalized = _normalize_text_keep_paragraphs(text)
         if not normalized:
             return []
@@ -195,13 +196,27 @@ class ParagraphChunker:
                 return
             char_start = current[0][0]
             char_end = current[-1][1]
-            meta = {
+            block_meta = {
                 "char_start": char_start,
                 "char_end": char_end,
                 "chunk_index": chunk_idx,
                 "chunk_char_len": len(chunk_text),
             }
-            chunks.append(ChunkDraft(chunk_index=chunk_idx, text=chunk_text, meta=meta))
+            meta = dict(block_meta)
+            blocks = [
+                Block(
+                    text=chunk_text,
+                    meta={
+                        "kind": "paragraph",
+                        "div_index": 0,
+                        "head": None,
+                        "xml_id": None,
+                        "targets": [],
+                        **block_meta,
+                    },
+                )
+            ]
+            chunks.append(ChunkDraft(chunk_index=chunk_idx, blocks=blocks, text=chunk_text, meta=meta))
             chunk_idx += 1
 
             if self.overlap > 0:
@@ -214,14 +229,28 @@ class ParagraphChunker:
         for p_start, p_end, p_text in paras:
             if _paragraph_is_title(p_text):
                 flush()
-                meta = {
+                base_meta = {
                     "char_start": p_start,
                     "char_end": p_end,
                     "chunk_index": chunk_idx,
                     "is_title": True,
                     "chunk_char_len": len(p_text.strip()),
                 }
-                chunks.append(ChunkDraft(chunk_index=chunk_idx, text=p_text.strip(), meta=meta))
+                meta = dict(base_meta)
+                blocks = [
+                    Block(
+                        text=p_text.strip(),
+                        meta={
+                            "kind": "title",
+                            "div_index": 0,
+                            "head": None,
+                            "xml_id": None,
+                            "targets": [],
+                            **base_meta,
+                        },
+                    )
+                ]
+                chunks.append(ChunkDraft(chunk_index=chunk_idx, blocks=blocks, text=p_text.strip(), meta=meta))
                 chunk_idx += 1
                 current = []
                 current_len = 0

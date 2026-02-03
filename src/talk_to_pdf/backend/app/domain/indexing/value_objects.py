@@ -1,13 +1,34 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector
 
 
+BlockKind = Literal[
+    "title",
+    "section_head",
+    "paragraph",
+    "equation",
+    "table",
+    "figure_caption",
+    "reference",
+    "list_item",
+    "footnote",
+    "unknown",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class Block:
+    text: str
+    meta: dict[str, Any] | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class ChunkDraft:
     chunk_index: int
+    blocks: list[Block]
     text: str
     meta: dict[str, Any] | None = None
 
@@ -32,5 +53,4 @@ class ChunkEmbeddingRef:
     chunk_id: UUID
     chunk_index: int
     embed_signature: str
-
 

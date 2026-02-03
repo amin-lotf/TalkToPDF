@@ -4,7 +4,7 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, ChunkEmbeddingDraft
+from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft, ChunkEmbeddingDraft
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
 from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
 from talk_to_pdf.backend.app.infrastructure.db.models.indexing import DocumentIndexModel, ChunkModel
@@ -48,13 +48,27 @@ def create_document_index_model(*,
         meta=None,
     )
 
+def _serialize_block(block: Block) -> dict[str, Any]:
+    return {
+        "text": block.text,
+        "meta": block.meta or {},
+    }
+
+
+def _chunk_meta_with_blocks(chunk: ChunkDraft) -> dict[str, Any] | None:
+    meta = dict(chunk.meta or {})
+    if chunk.blocks:
+        meta["blocks"] = [_serialize_block(b) for b in chunk.blocks]
+    return meta or None
+
+
 def create_chunk_models(index_id:UUID,chunks:list[ChunkDraft])->list[ChunkModel]:
     models = [
         ChunkModel(
             index_id=index_id,
             chunk_index=c.chunk_index,
             text=c.text,
-            meta=c.meta,
+            meta=_chunk_meta_with_blocks(c),
         )
         for c in chunks
     ]
@@ -125,4 +139,3 @@ def chunk_model_to_domain(m:ChunkModel)->Chunk:
         meta=m.meta,
         created_at=m.created_at,
     )
-

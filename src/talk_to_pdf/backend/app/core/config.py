@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     EMBED_MODEL: str = 'xxx'
     EMBED_BATCH_SIZE: int = 0
     EMBED_DIMENSIONS: Optional[int] = 0
-    CHUNKER_KIND: str = "xxx"
-    CHUNKER_MAX_CHARS: int = 0
+    CHUNKER_KIND: str = "block"
+    CHUNKER_MAX_CHARS: int = 1200
     CHUNKER_OVERLAP: int = 0
     MAX_TOP_K: int = 0
     MAX_TOP_N: int = 0
@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     QUERY_REWRITER_MODEL: str = 'xxx'
     QUERY_REWRITER_MAX_TURN: int = 6
     QUERY_REWRITER_MAX_HISTORY_CHARS: int = 6000
+    GROBID_URL: str = "http://localhost:8070"
 
 
 settings = Settings()
