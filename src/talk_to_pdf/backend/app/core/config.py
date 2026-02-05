@@ -1,41 +1,257 @@
-from typing import Optional
+"""Runtime configuration loaded from environment variables and .env."""
+import sys
+from typing import Any
 
+from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from talk_to_pdf.backend.app.core.const import (
+    DEFAULT_CHUNKER_KIND,
+    DEFAULT_CHUNKER_MAX_CHARS,
+    DEFAULT_CHUNKER_OVERLAP,
+    DEFAULT_EMBED_BATCH_SIZE,
+    DEFAULT_EMBED_DIMENSIONS,
+    DEFAULT_EMBED_MODEL,
+    DEFAULT_EMBED_PROVIDER,
+    DEFAULT_FILE_STORAGE_DIR,
+    DEFAULT_GROBID_URL,
+    DEFAULT_JWT_ALGORITHM,
+    DEFAULT_JWT_SECRET_KEY,
+    DEFAULT_MAX_TOP_K,
+    DEFAULT_MAX_TOP_N,
+    DEFAULT_QUERY_REWRITER_MAX_HISTORY_CHARS,
+    DEFAULT_QUERY_REWRITER_MAX_TURN,
+    DEFAULT_QUERY_REWRITER_MODEL,
+    DEFAULT_QUERY_REWRITER_PROVIDER,
+    DEFAULT_QUERY_REWRITER_TEMPERATURE,
+    DEFAULT_RERANKER_MODEL,
+    DEFAULT_RERANKER_PROVIDER,
+    DEFAULT_RERANKER_TEMPERATURE,
+    DEFAULT_REPLY_MAX_CONTEXT_CHARS,
+    DEFAULT_REPLY_MAX_OUTPUT_TOKENS,
+    DEFAULT_REPLY_MODEL,
+    DEFAULT_REPLY_PROVIDER,
+    DEFAULT_REPLY_TEMPERATURE,
+    DEFAULT_SKIP_AUTH,
+    DEFAULT_SQLALCHEMY_DATABASE_URL,
+    DEFAULT_TEST_SQLALCHEMY_DATABASE_URL,
+)
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True,env_parse_none_str='None')
-    SQLALCHEMY_DATABASE_URL: str = 'xxx'
-    TEST_SQLALCHEMY_DATABASE_URL: str = 'xxx'
-    JWT_SECRET_KEY: str = 'xxx'
-    JWT_ALGORITHM: str = 'xxx'
-    SKIP_AUTH: bool = False
-    FILE_STORAGE_DIR:str = 'xxx'
-    OPENAI_API_KEY: str = 'xxx'
-    EMBED_PROVIDER: str = 'xxx'
-    EMBED_MODEL: str = 'xxx'
-    EMBED_BATCH_SIZE: int = 0
-    EMBED_DIMENSIONS: Optional[int] = 0
-    CHUNKER_KIND: str = "block"
-    CHUNKER_MAX_CHARS: int = 1200
-    CHUNKER_OVERLAP: int = 0
-    MAX_TOP_K: int = 0
-    MAX_TOP_N: int = 0
-    REPLY_PROVIDER: str = 'xxx'
-    REPLY_TEMPERATURE: float = 0.2
-    REPLY_MODEL: str = 'xxx'
-    REPLY_MAX_OUTPUT_TOKENS: Optional[int] = None
-    REPLY_MAX_CONTEXT_CHARS: int = 20000
-    QUERY_REWRITER_PROVIDER: str = 'xxx'
-    QUERY_REWRITER_TEMPERATURE: float = 0.2
-    QUERY_REWRITER_MODEL: str = 'xxx'
-    QUERY_REWRITER_MAX_TURN: int = 6
-    QUERY_REWRITER_MAX_HISTORY_CHARS: int = 6000
-    GROBID_URL: str = "http://localhost:8070"
-    RERANKER_PROVIDER: str = 'xxx'
-    RERANKER_TEMPERATURE: float = 0.0
-    RERANKER_MODEL: str = 'xxx'
+    """Application settings loaded from environment variables and .env file."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        env_parse_none_str="None",
+    )
+
+    # Database
+    SQLALCHEMY_DATABASE_URL: str = Field(
+        default=DEFAULT_SQLALCHEMY_DATABASE_URL,
+        description="Async database URL (PostgreSQL/asyncpg with pgvector).",
+        min_length=1,
+    )
+    TEST_SQLALCHEMY_DATABASE_URL: str = Field(
+        default=DEFAULT_TEST_SQLALCHEMY_DATABASE_URL,
+        description="Async database URL used by the test suite.",
+        min_length=1,
+    )
+
+    # Security / auth
+    JWT_SECRET_KEY: str = Field(
+        default=DEFAULT_JWT_SECRET_KEY,
+        min_length=1,
+        description="JWT secret used to sign access tokens.",
+    )
+    JWT_ALGORITHM: str = Field(
+        default=DEFAULT_JWT_ALGORITHM,
+        min_length=1,
+        description="JWT signing algorithm.",
+    )
+    SKIP_AUTH: bool = Field(
+        default=DEFAULT_SKIP_AUTH,
+        description="Skip auth when running locally or in tests.",
+    )
+    FILE_STORAGE_DIR: str = Field(
+        default=DEFAULT_FILE_STORAGE_DIR,
+        min_length=1,
+        description="Base directory for storing uploaded files and artifacts.",
+    )
+
+    # API keys
+    OPENAI_API_KEY: str | None = Field(
+        default=None,
+        description="OpenAI API key for embedding, rerank, and chat calls.",
+    )
+
+    # Embeddings
+    EMBED_PROVIDER: str = Field(
+        default=DEFAULT_EMBED_PROVIDER,
+        min_length=1,
+        description="Embedding provider identifier.",
+    )
+    EMBED_MODEL: str = Field(
+        default=DEFAULT_EMBED_MODEL,
+        min_length=1,
+        description="Embedding model name.",
+    )
+    EMBED_BATCH_SIZE: int = Field(
+        default=DEFAULT_EMBED_BATCH_SIZE,
+        ge=1,
+        description="Batch size for embedding requests.",
+    )
+    EMBED_DIMENSIONS: int | None = Field(
+        default=DEFAULT_EMBED_DIMENSIONS,
+        description="Embedding dimensionality override (None for provider default).",
+    )
+
+    # Chunking
+    CHUNKER_KIND: str = Field(
+        default=DEFAULT_CHUNKER_KIND,
+        min_length=1,
+        description="Chunker flavor identifier.",
+    )
+    CHUNKER_MAX_CHARS: int = Field(
+        default=DEFAULT_CHUNKER_MAX_CHARS,
+        ge=1,
+        description="Maximum characters per chunk.",
+    )
+    CHUNKER_OVERLAP: int = Field(
+        default=DEFAULT_CHUNKER_OVERLAP,
+        ge=0,
+        description="Overlap characters injected between adjacent chunks.",
+    )
+
+    # Retrieval guardrails
+    MAX_TOP_K: int = Field(
+        default=DEFAULT_MAX_TOP_K,
+        ge=1,
+        description="Upper bound for vector search top_k requests.",
+    )
+    MAX_TOP_N: int = Field(
+        default=DEFAULT_MAX_TOP_N,
+        ge=1,
+        description="Upper bound for reranked results returned to clients.",
+    )
+
+    # Reply generation
+    REPLY_PROVIDER: str = Field(
+        default=DEFAULT_REPLY_PROVIDER,
+        min_length=1,
+        description="Provider for reply generation.",
+    )
+    REPLY_TEMPERATURE: float = Field(
+        default=DEFAULT_REPLY_TEMPERATURE,
+        ge=0.0,
+        le=2.0,
+        description="Temperature used for reply generation.",
+    )
+    REPLY_MODEL: str = Field(
+        default=DEFAULT_REPLY_MODEL,
+        min_length=1,
+        description="LLM model used for replies.",
+    )
+    REPLY_MAX_OUTPUT_TOKENS: int | None = Field(
+        default=DEFAULT_REPLY_MAX_OUTPUT_TOKENS,
+        description="Optional cap on tokens generated by the reply model.",
+    )
+    REPLY_MAX_CONTEXT_CHARS: int = Field(
+        default=DEFAULT_REPLY_MAX_CONTEXT_CHARS,
+        ge=1,
+        description="Maximum context characters passed into reply prompts.",
+    )
+
+    # Query rewriting
+    QUERY_REWRITER_PROVIDER: str = Field(
+        default=DEFAULT_QUERY_REWRITER_PROVIDER,
+        min_length=1,
+        description="Provider for query rewriting.",
+    )
+    QUERY_REWRITER_TEMPERATURE: float = Field(
+        default=DEFAULT_QUERY_REWRITER_TEMPERATURE,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for the query rewriter model.",
+    )
+    QUERY_REWRITER_MODEL: str = Field(
+        default=DEFAULT_QUERY_REWRITER_MODEL,
+        min_length=1,
+        description="Model used to rewrite user queries.",
+    )
+    QUERY_REWRITER_MAX_TURN: int = Field(
+        default=DEFAULT_QUERY_REWRITER_MAX_TURN,
+        ge=1,
+        description="Maximum number of turns from history kept for rewriting.",
+    )
+    QUERY_REWRITER_MAX_HISTORY_CHARS: int = Field(
+        default=DEFAULT_QUERY_REWRITER_MAX_HISTORY_CHARS,
+        ge=0,
+        description="Maximum characters of chat history passed to the rewriter.",
+    )
+
+    # External services
+    GROBID_URL: str = Field(
+        default=DEFAULT_GROBID_URL,
+        min_length=1,
+        description="Base URL for the Grobid service.",
+    )
+    RERANKER_PROVIDER: str = Field(
+        default=DEFAULT_RERANKER_PROVIDER,
+        min_length=1,
+        description="Provider for reranking context chunks.",
+    )
+    RERANKER_TEMPERATURE: float = Field(
+        default=DEFAULT_RERANKER_TEMPERATURE,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for reranker LLM calls.",
+    )
+    RERANKER_MODEL: str = Field(
+        default=DEFAULT_RERANKER_MODEL,
+        min_length=1,
+        description="Model used for reranking context chunks.",
+    )
+
+    @field_validator("OPENAI_API_KEY", mode="before")
+    @classmethod
+    def _blank_api_key_to_none(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+    @field_validator("EMBED_DIMENSIONS", "REPLY_MAX_OUTPUT_TOKENS")
+    @classmethod
+    def _validate_positive_optional(cls, v: int | None, info) -> int | None:
+        if v is None:
+            return None
+        int_val = int(v)
+        if int_val <= 0:
+            raise ValueError(f"{info.field_name} must be positive when set")
+        return int_val
+
+    @model_validator(mode="after")
+    def _check_cross_fields(self) -> "Settings":
+        if self.MAX_TOP_N > self.MAX_TOP_K:
+            raise ValueError("MAX_TOP_N cannot exceed MAX_TOP_K")
+        return self
 
 
+def load_settings_or_die() -> Settings:
+    try:
+        return Settings()
+    except ValidationError as e:
+        print("[CONFIG ERROR] Invalid environment configuration:", file=sys.stderr)
+        for err in e.errors():
+            loc = ".".join(str(x) for x in err.get("loc", []))
+            msg = err.get("msg", "invalid value")
+            print(f"  - {loc}: {msg}", file=sys.stderr)
+        sys.exit(2)
 
-settings = Settings()
+
+settings = load_settings_or_die()

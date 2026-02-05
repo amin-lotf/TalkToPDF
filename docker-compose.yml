@@ -1,0 +1,47 @@
+services:
+  app:
+    build: .
+    container_name: talk_app
+    depends_on:
+      db:
+        condition: service_healthy
+      grobid:
+        condition: service_started
+    env_file:
+      - .env.docker
+    environment:
+      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:4260@db:5432/talk_to_pdf
+      TEST_SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:4260@db:5432/talk_to_pdf_test
+      DEFAULT_GROBID_URL: http://grobid:8070
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: talk_db
+    environment:
+      POSTGRES_DB: talk_to_pdf
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1234"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d talk_to_pdf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  grobid:
+    image: lfoppiano/grobid:latest-full
+    container_name: grobid
+    environment:
+      JAVA_OPTS: "-Xms1g -Xmx4g"
+    ports:
+      - "8070:8070"   # optional: for host access/debug
+      - "8071:8071"
+
+
+volumes:
+  pgdata:

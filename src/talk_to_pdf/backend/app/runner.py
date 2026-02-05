@@ -1,24 +1,20 @@
-import subprocess
+from __future__ import annotations
+
 import sys
-from pathlib import Path
+
+from talk_to_pdf.shared.proc import popen
 
 
-def run():
-    pkg_dir = Path(__file__).resolve().parent
-    home_path = pkg_dir / "main.py"
-    if not  home_path.exists():
-        raise FileNotFoundError(f"No main.py found in {home_path}")
-
+def run(*, host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
     api_cmd = [
-        sys.executable,
-        "-m", "uvicorn",
+        sys.executable, "-m", "uvicorn",
         "talk_to_pdf.backend.app.main:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload",
-        # "--log-level", "warning",  # optional: less noisy logs
+        "--host", host,
+        "--port", str(port),
+        "--log-level", "info",
     ]
+    if reload:
+        api_cmd.append("--reload")
 
-    print("Starting API on http://localhost:8000")
-    ui_proc = subprocess.Popen(api_cmd)
-    return ui_proc
+    print(f"[talk_to_pdf] API: http://{host}:{port}")
+    return popen(api_cmd)

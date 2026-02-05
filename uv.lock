@@ -2009,6 +2009,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "langchain", extra = ["openai"] },
+    { name = "pandas-stubs" },
     { name = "passlib" },
     { name = "pgvector" },
     { name = "pydantic-settings" },
@@ -2016,6 +2017,7 @@ dependencies = [
     { name = "python-jose", extra = ["cryptography"] },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
+    { name = "streamlit" },
     { name = "tiktoken" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2026,10 +2028,6 @@ dev = [
     { name = "psycopg2" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
-]
-ui = [
-    { name = "pandas-stubs" },
-    { name = "streamlit" },
 ]
 
 [package.metadata]
@@ -2042,7 +2040,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "langchain", extras = ["openai"], specifier = ">=1.2.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pandas-stubs", marker = "extra == 'ui'", specifier = ">=2.2" },
+    { name = "pandas-stubs", specifier = ">=2.2" },
     { name = "passlib", specifier = ">=1.7.4" },
     { name = "pgvector", specifier = ">=0.4.2" },
     { name = "psycopg2", marker = "extra == 'dev'" },
@@ -2053,11 +2051,11 @@ requires-dist = [
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.5.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "sqlalchemy", specifier = ">=2.0.45" },
-    { name = "streamlit", marker = "extra == 'ui'", specifier = ">=1.38" },
+    { name = "streamlit", specifier = ">=1.38" },
     { name = "tiktoken", specifier = ">=0.5.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
 ]
-provides-extras = ["ui", "dev"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "tenacity"
