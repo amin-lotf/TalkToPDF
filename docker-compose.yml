@@ -10,8 +10,8 @@ services:
     env_file:
       - .env.docker
     environment:
-      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:4260@db:5432/talk_to_pdf
-      TEST_SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:4260@db:5432/talk_to_pdf_test
+      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:1234@db:5432/talk_to_pdf
+      TEST_SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://postgres:1234@db:5432/talk_to_pdf_test
       DEFAULT_GROBID_URL: http://grobid:8070
     ports:
       - "8000:8000"
