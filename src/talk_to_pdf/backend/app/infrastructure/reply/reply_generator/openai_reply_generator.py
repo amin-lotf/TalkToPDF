@@ -12,17 +12,16 @@ from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 from talk_to_pdf.backend.app.domain.reply.value_objects import GenerateReplyInput
 from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_tokens, count_message_tokens
 
-DEFAULT_SYSTEM = (
-    "You are a helpful assistant.\n"
-    "Answer using the provided context when relevant.\n"
-    "If the context does not contain the answer, say you don't know.\n"
-    "Be concise and correct."
-)
+DEFAULT_SYSTEM = ( "You are a helpful assistant.\n"
+                   "Answer using the provided context when relevant.\n"
+                   "If the context does not contain the answer, say you don't know.\n" 
+                   "Be concise and correct. \n"
 
-CONTEXT_PREAMBLE = (
-    "Use the following context as your primary source.\n"
-    "Context:\n"
-)
+                   )
+
+CONTEXT_PREAMBLE = ( "Use the following context as your primary source.\n" 
+                     "Context:\n" )
+
 
 
 @dataclass

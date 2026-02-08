@@ -17,7 +17,7 @@ def build_worker() -> IndexingWorkerService:
     deps = WorkerDeps(
         pdf_to_xml_converter=GrobidPdfToXmlConverter(base_url=settings.GROBID_URL),
         block_extractor=GrobidTeiBlockExtractor(),
-        block_chunker=DefaultBlockChunker(max_chars=settings.CHUNKER_MAX_CHARS),
+        block_chunker=DefaultBlockChunker(max_chars=settings.CHUNKER_MAX_CHARS,overlap_chars=settings.CHUNKER_OVERLAP),
         embedder_factory=OpenAIEmbedderFactory(api_key=settings.OPENAI_API_KEY),
         session_factory=SessionLocal,
         uow_factory=SqlAlchemyUnitOfWork,

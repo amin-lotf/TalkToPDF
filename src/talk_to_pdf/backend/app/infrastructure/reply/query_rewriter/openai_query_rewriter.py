@@ -22,7 +22,11 @@ REWRITE_SYSTEM = (
     "- Prefer diverse angles (terminology variants, constraints, sub-aspects) over minor wording tweaks.\n"
     "- Keep queries concise; no answers or explanations.\n"
     "- Ensure queries are unique, non-empty strings.\n"
+    "- If the user request involves a comparison (e.g., A vs B, X compared to Y, pros/cons between items):\n"
+    "  * Generate at least one standalone query per item being compared.\n"
+    "  * Optionally include one query focused on direct comparison criteria (trade-offs, benchmarks, differences).\n"
 )
+
 
 REWRITE_HUMAN = (
     "Latest user query:\n"

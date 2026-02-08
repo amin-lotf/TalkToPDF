@@ -117,6 +117,8 @@ class BuildIndexContextUseCase:
         rewritten_queries = [q for q in rewrite_result.queries if not _is_blank(q)]
         if not rewritten_queries:
             rewritten_queries = [(dto.query or "").strip()]
+        else:
+            rewritten_queries.append(dto.query or "")
 
 
         await self._progress.emit(
