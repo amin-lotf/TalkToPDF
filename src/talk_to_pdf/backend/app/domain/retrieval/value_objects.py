@@ -31,7 +31,7 @@ class ChunkMatch:
     chunk_index: int
     score: float  # interpretation depends on metric (similarity or negative distance)
     source: MatchSource
-    matched_by: list[int] | None = None  # indexes of queries that retrieved this chunk
+    matched_by: set[int] | None = None  # indexes of queries that retrieved this chunk
 
 
 

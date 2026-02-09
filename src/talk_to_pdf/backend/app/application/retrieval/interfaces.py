@@ -29,11 +29,14 @@ class QueryRewriter(Protocol):
 
 
 class RetrievalResultMerger(Protocol):
+    w_vec: float
+    w_fts: float
     async def merge(
         self,
         *,
         query_texts: list[str],
-        per_query_matches: list[list[ChunkMatch]],
+        per_query_vec_matches: list[list[ChunkMatch]],
+        per_query_fts_matches: list[list[ChunkMatch]],
         top_k: int,
         original_query: str,
     ) -> MergeResult: ...

@@ -1,6 +1,7 @@
 # talk_to_pdf/backend/app/application/retrieval/use_cases/build_index_context.py
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any, Callable
 from uuid import UUID
@@ -117,10 +118,20 @@ class BuildIndexContextUseCase:
         rewritten_queries = [q for q in rewrite_result.queries if not _is_blank(q)]
         if not rewritten_queries:
             rewritten_queries = [(dto.query or "").strip()]
-        else:
-            rewritten_queries.append(dto.query or "")
 
+        orig = (dto.query or "").strip()
+        if orig and orig not in rewritten_queries:
+            rewritten_queries.append(orig)
 
+        def _extract_acronyms(q: str) -> list[str]:
+            import re
+            return re.findall(r"\b[A-Z]{2,8}\b", q or "")
+
+        for q in rewritten_queries:
+            acros = _extract_acronyms(q)
+            for a in acros:
+                if a not in rewritten_queries:
+                    rewritten_queries.append(a)
         await self._progress.emit(
             ProgressEvent(
                 name="multi_rewrite_done",
@@ -174,31 +185,51 @@ class BuildIndexContextUseCase:
             )
         )
 
-        per_query_matches: list[list[ChunkMatch]] = []
+        per_query_vec_matches: list[list[ChunkMatch]] = []
+        per_query_fts_matches: list[list[ChunkMatch]] = []
+
+        async def _search_one(q_idx: int, qvec: Vector) -> tuple[list[ChunkMatch], list[ChunkMatch]]:
+            q_text = rewritten_queries[q_idx]
+
+            vec_matches = await uow.chunk_search_repo.similarity_search(
+                query=qvec,
+                top_k=top_k,
+                embed_signature=embed_sig,
+                index_id=dto.index_id,
+                metric=self._metric,
+            )
+
+            fts_matches = await uow.chunk_search_repo.fts_search(
+                query=q_text,
+                top_k=top_k,
+                index_id=dto.index_id,
+                config="english",
+            )
+
+            return vec_matches, fts_matches
+
         async with uow:
-            for idx, qvec in enumerate(query_vectors):
-                matches = await uow.chunk_search_repo.similarity_search(
-                    query=qvec,
-                    top_k=top_k,
-                    embed_signature=embed_sig,
-                    index_id=dto.index_id,
-                    metric=self._metric,
-                )
-                per_query_matches.append(matches)
+            for q_idx, qvec in enumerate(query_vectors):
+                vec_matches, fts_matches = await _search_one(q_idx, qvec)
+                per_query_vec_matches.append(vec_matches)
+                per_query_fts_matches.append(fts_matches)
+
                 await self._progress.emit(
                     ProgressEvent(
-                        name="vector_search_done",
+                        name="hybrid_search_done",
                         payload={
-                            "query_index": idx,
+                            "query_index": q_idx,
                             "top_k": top_k,
-                            "returned": len(matches),
+                            "vec_returned": len(vec_matches),
+                            "fts_returned": len(fts_matches),
+                            "returned": len(vec_matches) + len(fts_matches),
                         },
                     )
                 )
-
         merge_result = await self._retrieval_merger.merge(
             query_texts=rewritten_queries,
-            per_query_matches=per_query_matches,
+            per_query_vec_matches=per_query_vec_matches,
+            per_query_fts_matches=per_query_fts_matches,
             top_k=top_k,
             original_query=dto.query,
         )
