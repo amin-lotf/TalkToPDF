@@ -21,9 +21,9 @@ class DeterministicRetrievalResultMerger:
     - Preserve which query indices matched each chunk (matched_by).
     - Return top_k by aggregated score (higher is better).
     """
-    def __init__(self) -> None:
-        self.w_vec: float = 0.65
-        self.w_fts: float = 0.35
+    def __init__(self,w_vec:float=0.65,w_fts:float=0.35) -> None:
+        self.w_vec: float = w_vec
+        self.w_fts: float = w_fts
 
     async def merge(
         self,

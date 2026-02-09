@@ -34,7 +34,7 @@ from talk_to_pdf.backend.app.core.const import (
     DEFAULT_REPLY_TEMPERATURE,
     DEFAULT_SKIP_AUTH,
     DEFAULT_SQLALCHEMY_DATABASE_URL,
-    DEFAULT_TEST_SQLALCHEMY_DATABASE_URL,
+    DEFAULT_TEST_SQLALCHEMY_DATABASE_URL, DEFAULT_RETRIEVAL_MERGER_WEIGHT_VEC, DEFAULT_RETRIEVAL_MERGER_WEIGHT_FTS,
 )
 
 
@@ -215,6 +215,17 @@ class Settings(BaseSettings):
         min_length=1,
         description="Model used for reranking context chunks.",
     )
+    RETRIEVAL_MERGER_WEIGHT_VEC : float = Field(
+        default= DEFAULT_RETRIEVAL_MERGER_WEIGHT_VEC,
+        ge=0.0,
+        le=1.0,
+        description="Weight of the vector similarity term in the retrieval merger.")
+
+    RETRIEVAL_MERGER_WEIGHT_FTS : float = Field(
+        default= DEFAULT_RETRIEVAL_MERGER_WEIGHT_FTS,
+        ge=0.0,
+        le=1.0,
+        description="Weight of the full-text search term in the retrieval merger.")
 
     @field_validator("OPENAI_API_KEY", mode="before")
     @classmethod

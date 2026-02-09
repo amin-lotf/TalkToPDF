@@ -72,7 +72,7 @@ def get_build_index_context_use_case(
         max_top_k=settings.MAX_TOP_K,
         max_top_n=settings.MAX_TOP_N,
         query_rewriter=query_rewriter,
-        retrieval_merger=DeterministicRetrievalResultMerger(),
+        retrieval_merger=DeterministicRetrievalResultMerger(w_vec=settings.RETRIEVAL_MERGER_WEIGHT_VEC,w_fts=settings.RETRIEVAL_MERGER_WEIGHT_FTS),
     )
 
 def get_get_chat_messages_use_case(

@@ -271,9 +271,9 @@ def _sidebar_chats(index_ready: bool) -> None:
 # -----------------------------
 def _sidebar_chat_settings() -> None:
     st.sidebar.markdown("### Chat settings")
-    st.session_state.setdefault("top_k", 10)
-    st.session_state.setdefault("top_n", 5)
-    st.session_state.setdefault("rerank_timeout_s", 0.6)
+    st.session_state.setdefault("top_k", 40)
+    st.session_state.setdefault("top_n", 10)
+    st.session_state.setdefault("rerank_timeout_s", 2)
 
     st.session_state["top_k"] = st.sidebar.number_input(
         "top_k", min_value=1, max_value=50, value=int(st.session_state["top_k"]), step=1

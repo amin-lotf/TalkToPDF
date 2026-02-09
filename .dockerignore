@@ -11,6 +11,7 @@ assets
 datasets
 runs
 checkpoints
+tmpstorage
 model
 policy
 tests
