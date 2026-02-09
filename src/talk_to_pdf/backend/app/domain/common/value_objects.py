@@ -27,6 +27,7 @@ class Chunk:
     index_id: UUID
     chunk_index: int
     text: str
+    text_norm: str
     meta: dict[str, Any] | None
     created_at: datetime
 

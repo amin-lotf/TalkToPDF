@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, desc, select, update, exists
+from sqlalchemy import delete, desc, select, update, exists, func
 from sqlalchemy.dialects.postgresql import insert
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
-from talk_to_pdf.backend.app.domain.common.enums import VectorMetric
+from talk_to_pdf.backend.app.domain.common.enums import VectorMetric, MatchSource
 from talk_to_pdf.backend.app.domain.indexing.value_objects import ChunkDraft, ChunkEmbeddingDraft
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, Chunk, EmbedConfig
 from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
@@ -397,4 +397,43 @@ class SqlAlchemyChunkVectorRepository:
         )
 
         rows = (await self._session.execute(stmt)).all()
-        return rows_to_chunk_matches(rows)
+        return rows_to_chunk_matches(rows, source=MatchSource.VECTOR)
+
+    async def fts_search(
+        self,
+        *,
+        index_id: UUID,
+        query: str,
+        top_k: int,
+        config: str = "english",
+    ) -> list[ChunkMatch]:
+        """
+        Lexical search using Postgres full text search.
+        - Uses websearch_to_tsquery for friendly syntax and good recall.
+        - Returns ts_rank_cd scores (higher is better).
+        """
+        if top_k <= 0:
+            return []
+        q = (query or "").strip()
+        if not q:
+            return []
+
+        # websearch_to_tsquery handles terms like: isac, "soft actor-critic", Zhang, etc.
+        tsquery = func.websearch_to_tsquery(config, q)
+
+        rank = func.ts_rank_cd(ChunkModel.tsv, tsquery).label("score")
+
+        stmt = (
+            select(
+                ChunkModel.id.label("chunk_id"),
+                ChunkModel.chunk_index,
+                rank,
+            )
+            .where(ChunkModel.index_id == index_id)
+            .where(ChunkModel.tsv.op("@@")(tsquery))
+            .order_by(rank.desc())
+            .limit(top_k)
+        )
+
+        rows = (await self._session.execute(stmt)).all()
+        return rows_to_chunk_matches(rows, source=MatchSource.FTS)

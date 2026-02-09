@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from talk_to_pdf.backend.app.domain.common.enums import MatchSource
+
+
 @dataclass(frozen=True, slots=True)
 class RerankContext:
     """
@@ -27,4 +30,9 @@ class ChunkMatch:
     chunk_id: UUID
     chunk_index: int
     score: float  # interpretation depends on metric (similarity or negative distance)
+    source: MatchSource
     matched_by: list[int] | None = None  # indexes of queries that retrieved this chunk
+
+
+
+

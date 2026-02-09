@@ -13,3 +13,8 @@ class ChatRole(StrEnum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
+
+
+class MatchSource(StrEnum):
+    VECTOR = "vector"
+    FTS = "fts"

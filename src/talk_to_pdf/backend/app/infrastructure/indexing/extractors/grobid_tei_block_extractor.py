@@ -5,10 +5,18 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, BlockKind
+from talk_to_pdf.backend.app.infrastructure.indexing.text_normalizer import normalize_block_text_by_kind
 
 TEI_NS = {"tei": "http://www.tei-c.org/ns/1.0"}
 XML_ID_ATTR = "{http://www.w3.org/XML/1998/namespace}id"
 _WS = re.compile(r"\s+")
+
+
+# 1) Join hyphenated line-break words: "im-\nproved" -> "improved"
+
+# 2) Turn single newlines into spaces (but keep paragraph breaks)
+
+# 3) Collapse excessive spaces (after transformations)
 
 
 def _normalize_text(text: str | None) -> str:
@@ -88,6 +96,7 @@ class GrobidTeiBlockExtractor:
             out.append(
                 Block(
                     text=head_text,
+                    text_norm=normalize_block_text_by_kind(head_text, kind="section_head"),
                     meta={
                         "div_index": div_index,
                         "head": head_text,
@@ -134,6 +143,7 @@ class GrobidTeiBlockExtractor:
                     out.append(
                         Block(
                             text=fallback,
+                            text_norm=normalize_block_text_by_kind(fallback, kind="unknown"),
                             meta={
                                 "div_index": div_index,
                                 "head": head_text,
@@ -163,7 +173,7 @@ class GrobidTeiBlockExtractor:
             "xml_id": _get_xml_id(elem),
             "targets": targets,
         }
-        return Block(text=text, meta=meta)
+        return Block(text=text, text_norm=normalize_block_text_by_kind(text, kind=kind), meta=meta)
 
     def _equation_block(self, elem: ET.Element, div_index: int, head_text: str | None) -> Block | None:
         label_el = elem.find("tei:label", TEI_NS)
@@ -181,6 +191,7 @@ class GrobidTeiBlockExtractor:
 
         return Block(
             text=eq_text or (label or ""),
+            text_norm=normalize_block_text_by_kind(eq_text or (label or ""), kind="equation"),
             meta={
                 "div_index": div_index,
                 "head": head_text,
@@ -209,7 +220,7 @@ class GrobidTeiBlockExtractor:
             "xml_id": _get_xml_id(elem),
             "targets": [],
         }
-        return Block(text=text, meta=meta)
+        return Block(text=text, text_norm=normalize_block_text_by_kind(text, kind=kind), meta=meta)
 
     def _figure_block(self, elem: ET.Element, div_index: int, head_text: str | None) -> Block | None:
         desc = elem.find("tei:figDesc", TEI_NS)
@@ -218,6 +229,7 @@ class GrobidTeiBlockExtractor:
             return None
         return Block(
             text=text,
+            text_norm=normalize_block_text_by_kind(text, kind="figure_caption"),
             meta={
                 "div_index": div_index,
                 "head": head_text,
@@ -246,7 +258,7 @@ class GrobidTeiBlockExtractor:
                 "xml_id": _get_xml_id(item),
                 "targets": targets,
             }
-            items.append(Block(text=text, meta=meta))
+            items.append(Block(text=text, text_norm=normalize_block_text_by_kind(text, kind="list_item" if not is_reference else "reference"), meta=meta))
         return items
 
     def _note_block(self, elem: ET.Element, div_index: int, head_text: str | None) -> Block | None:
@@ -263,7 +275,7 @@ class GrobidTeiBlockExtractor:
             "xml_id": _get_xml_id(elem),
             "targets": targets,
         }
-        return Block(text=text, meta=meta)
+        return Block(text=text, text_norm=normalize_block_text_by_kind(text, kind=kind), meta=meta)
 
     def _is_reference_div(self, div: ET.Element, head_text: str | None) -> bool:
         dtype = (div.attrib.get("type") or "").lower()

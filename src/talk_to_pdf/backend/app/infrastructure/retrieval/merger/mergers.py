@@ -6,6 +6,7 @@ from uuid import UUID
 
 from talk_to_pdf.backend.app.application.retrieval.interfaces import RetrievalResultMerger, Reranker
 from talk_to_pdf.backend.app.application.retrieval.value_objects import MergeResult
+from talk_to_pdf.backend.app.domain.common.enums import MatchSource
 from talk_to_pdf.backend.app.domain.common.value_objects import Chunk
 from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
 
@@ -14,6 +15,7 @@ from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch
 class _AggregatedMatch:
     score: float
     chunk_index: int
+    source:MatchSource
     matched_by: set[int]
 
 
@@ -50,6 +52,7 @@ class DeterministicRetrievalResultMerger:
                         score=float(match.score),
                         chunk_index=match.chunk_index,
                         matched_by={q_idx},
+                        source=match.source
                     )
                     continue
 
@@ -59,6 +62,7 @@ class DeterministicRetrievalResultMerger:
                         score=float(match.score),
                         chunk_index=match.chunk_index,
                         matched_by=existing.matched_by,
+                        source=match.source
                     )
 
         merged_matches: list[ChunkMatch] = []
@@ -68,6 +72,7 @@ class DeterministicRetrievalResultMerger:
                     chunk_id=key,
                     chunk_index=agg.chunk_index,
                     score=agg.score,
+                    source=agg.source,
                     matched_by=sorted(agg.matched_by),
                 )
             )

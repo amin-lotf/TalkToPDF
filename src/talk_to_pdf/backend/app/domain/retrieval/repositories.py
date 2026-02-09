@@ -16,3 +16,12 @@ class ChunkSearchRepository(Protocol):
         index_id: UUID,
         metric: VectorMetric = VectorMetric.COSINE,
     ) -> list[ChunkMatch]: ...
+
+    async def fts_search(
+            self,
+            *,
+            index_id: UUID,
+            query: str,
+            top_k: int,
+            config: str,
+    ) -> list[ChunkMatch]:...

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from sqlalchemy import Enum as SAEnum, UniqueConstraint
+from sqlalchemy import Enum as SAEnum, UniqueConstraint, Computed, Index
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector as PGVector
 
@@ -67,12 +67,28 @@ class ChunkModel(Base):
     )
 
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
     text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # NEW: normalized text used for better retrieval (de-hyphenate, newline cleanup, etc.)
+    text_norm: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # NEW: full-text search vector (generated, always in sync)
+    tsv: Mapped[str] = mapped_column(
+        TSVECTOR(),
+        Computed("to_tsvector('english', coalesce(text_norm, text))", persisted=True),
+        nullable=False,
+    )
+
     meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
     index: Mapped["DocumentIndexModel"] = relationship(back_populates="chunks")
+
     __table_args__ = (
         UniqueConstraint("index_id", "chunk_index", name="uq_chunks_index_chunk_index"),
+        # NEW: GIN index for FTS
+        Index("ix_chunks_tsv_gin", "tsv", postgresql_using="gin"),
     )
 
 

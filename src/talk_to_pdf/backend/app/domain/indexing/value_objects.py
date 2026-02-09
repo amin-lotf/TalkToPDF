@@ -22,6 +22,7 @@ BlockKind = Literal[
 @dataclass(frozen=True, slots=True)
 class Block:
     text: str
+    text_norm:str
     meta: dict[str, Any] | None = None
 
 
@@ -30,6 +31,7 @@ class ChunkDraft:
     chunk_index: int
     blocks: list[Block]
     text: str
+    text_norm: str
     meta: dict[str, Any] | None = None
 
 

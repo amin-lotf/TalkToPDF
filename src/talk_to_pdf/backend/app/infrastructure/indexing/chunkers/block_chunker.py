@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Literal
 
 from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
+from talk_to_pdf.backend.app.infrastructure.indexing.text_normalizer import normalize_block_text_by_kind
 
 FlushReason = Literal["size", "section", "div_end", "end"]
 
@@ -208,7 +209,7 @@ class DefaultBlockChunker:
                     sub_meta["char_start"] = s
                     sub_meta["char_end"] = e
                     sub_text = text[s:e].strip()
-                    out.append(Block(text=sub_text, meta=sub_meta))
+                    out.append(Block(text=sub_text, text_norm=normalize_block_text_by_kind(sub_text,kind="split_block"), meta=sub_meta))
 
             return out
 
@@ -221,6 +222,7 @@ class DefaultBlockChunker:
 
         buf_blocks: list[Block] = []
         buf_texts: list[str] = []
+        buf_texts_norms: list[str] = []
         buf_len: int = 0
         chunk_idx: int = 0
         current_div: int | None = None
@@ -263,7 +265,7 @@ class DefaultBlockChunker:
                 m["head"] = head_text
             m["synthetic"] = True
             m["synthetic_kind"] = "overlap_block"
-            return Block(text=b.text, meta=m)
+            return Block(text=b.text, text_norm=normalize_block_text_by_kind(b.text,kind="overlap_block"), meta=m)
 
         def _carry_overlap_suffix(
             *,
@@ -271,46 +273,49 @@ class DefaultBlockChunker:
             head_text: str | None,
             prev_blocks: list[Block],
             prev_texts: list[str],
-        ) -> tuple[list[Block], list[str], int]:
+            prev_texts_norms: list[str],
+        ) -> tuple[list[Block], list[str], list[str], int]:
             if overlap_budget <= 0:
-                return [], [], 0
+                return [], [], [], 0
 
             # Prefer overlapping "real content" (exclude overlap blocks; allow split blocks)
-            pairs: list[tuple[Block, str]] = []
-            for b, t in zip(prev_blocks, prev_texts):
+            pairs: list[tuple[Block, str,str]] = []
+            for b, t, tn in zip(prev_blocks, prev_texts, prev_texts_norms):
                 if (b.meta or {}).get("synthetic_kind") == "overlap_block":
                     continue
                 if (b.meta or {}).get("kind") == "section_head":
                     continue
                 if t.strip():
-                    pairs.append((b, t))
+                    pairs.append((b, t,tn))
 
-            chosen: list[tuple[Block, str]] = []
+            chosen: list[tuple[Block, str,str]] = []
             total = 0
-            for b, t in reversed(pairs):
+            for b, t,tn in reversed(pairs):
                 sep = 2 if chosen else 0
                 nxt = total + sep + len(t)
                 if nxt > overlap_budget:
                     break
-                chosen.append((b, t))
+                chosen.append((b, t,tn))
                 total = nxt
             chosen.reverse()
 
             if not chosen:
-                return [], [], 0
+                return [], [],[], 0
 
             ov_blocks: list[Block] = []
             ov_texts: list[str] = []
-            for b, t in chosen:
+            ov_texts_norms: list[str] = []
+            for b, t,tn in chosen:
                 ov_blocks.append(_copy_as_overlap_block(b, div_index, head_text))
                 ov_texts.append(t)
-            return ov_blocks, ov_texts, total
+                ov_texts_norms.append(tn)
+            return ov_blocks, ov_texts, ov_texts_norms, total
 
         def _recompute_buf_len() -> int:
             return len(_join_texts(buf_texts))
 
         def _ensure_fit_next(rendered_next: str) -> None:
-            nonlocal buf_blocks, buf_texts, buf_len
+            nonlocal buf_blocks, buf_texts, buf_texts_norms, buf_len
 
             def cand_len() -> int:
                 sep = 2 if buf_texts else 0
@@ -325,6 +330,7 @@ class DefaultBlockChunker:
                     break
                 buf_blocks.pop(0)
                 buf_texts.pop(0)
+                buf_texts_norms.pop(0)
                 buf_len = _recompute_buf_len()
 
             # If still too big, DO NOT discard. Flush instead.
@@ -332,7 +338,7 @@ class DefaultBlockChunker:
                 flush("size")
 
         def flush(reason: FlushReason) -> None:
-            nonlocal buf_blocks, buf_texts, buf_len, chunk_idx
+            nonlocal buf_blocks, buf_texts,buf_texts_norms, buf_len, chunk_idx
 
             if not buf_blocks:
                 return
@@ -342,14 +348,17 @@ class DefaultBlockChunker:
             if not real_blocks:
                 buf_blocks = []
                 buf_texts = []
+                buf_texts_norms = []
                 buf_len = 0
                 return
 
             div_index = current_div if current_div is not None else (_block_div_index(buf_blocks[0]) or 0)
             text = _join_texts(buf_texts)
+            text_norms = _join_texts(buf_texts_norms)
             if not text:
                 buf_blocks = []
                 buf_texts = []
+                buf_texts_norms = []
                 buf_len = 0
                 return
 
@@ -359,6 +368,7 @@ class DefaultBlockChunker:
                     chunk_index=chunk_idx,
                     blocks=list(buf_blocks),
                     text=text,
+                    text_norm=text_norms,
                     meta=meta,
                 )
             )
@@ -366,20 +376,23 @@ class DefaultBlockChunker:
 
             if reason == "size" and overlap_budget > 0:
                 head_text = _current_head_text(buf_blocks)
-                ov_blocks, ov_texts, ov_len = _carry_overlap_suffix(
+                ov_blocks, ov_texts, ov_texts_norms, ov_len = _carry_overlap_suffix(
                     div_index=div_index,
                     head_text=head_text,
                     prev_blocks=buf_blocks,
                     prev_texts=buf_texts,
+                    prev_texts_norms=buf_texts_norms,
                 )
                 if ov_blocks:
                     buf_blocks = ov_blocks
                     buf_texts = ov_texts
+                    buf_texts_norms = ov_texts_norms
                     buf_len = ov_len
                     return
 
             buf_blocks = []
             buf_texts = []
+            buf_texts_norms = []
             buf_len = 0
 
         # Main loop: enforce div boundaries + section boundaries + size splits
@@ -401,6 +414,7 @@ class DefaultBlockChunker:
                 flush("section")
                 buf_blocks = [block]
                 buf_texts = [rendered]
+                buf_texts_norms = [normalize_block_text_by_kind(rendered,kind='section_head')]
                 buf_len = len(rendered)
                 continue
 
@@ -411,6 +425,7 @@ class DefaultBlockChunker:
 
                 div_index = current_div if current_div is not None else (b_div or 0)
                 text = rendered.strip()
+                text_norms = normalize_block_text_by_kind(rendered,kind="non-splittable")
                 meta = {
                     "chunk_index": chunk_idx,
                     "chunk_char_len": len(text),
@@ -425,6 +440,7 @@ class DefaultBlockChunker:
                         chunk_index=chunk_idx,
                         blocks=[block],
                         text=text,
+                        text_norm=text_norms,
                         meta=meta,
                     )
                 )

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 from uuid import UUID
 
+from talk_to_pdf.backend.app.domain.common.enums import MatchSource
 from talk_to_pdf.backend.app.domain.indexing.entities import DocumentIndex
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus
 from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft, ChunkEmbeddingDraft
@@ -68,6 +69,7 @@ def create_chunk_models(index_id:UUID,chunks:list[ChunkDraft])->list[ChunkModel]
             index_id=index_id,
             chunk_index=c.chunk_index,
             text=c.text,
+            text_norm=c.text_norm,
             meta=_chunk_meta_with_blocks(c),
         )
         for c in chunks
@@ -112,7 +114,7 @@ def embedding_drafts_to_insert_rows(
         for e in embeddings
     ]
 
-def rows_to_chunk_matches(rows: Iterable[object]) -> list[ChunkMatch]:
+def rows_to_chunk_matches(rows: Iterable[object],source:MatchSource) -> list[ChunkMatch]:
     """
     Map raw SQLAlchemy result rows to domain ChunkMatch objects.
 
@@ -125,6 +127,7 @@ def rows_to_chunk_matches(rows: Iterable[object]) -> list[ChunkMatch]:
         ChunkMatch(
             chunk_id=row.chunk_id,
             chunk_index=row.chunk_index,
+            source=source,
             score=float(row.score),
         )
         for row in rows
@@ -136,6 +139,7 @@ def chunk_model_to_domain(m:ChunkModel)->Chunk:
         index_id=m.index_id,
         chunk_index=m.chunk_index,
         text=m.text,
+        text_norm=m.text_norm,
         meta=m.meta,
         created_at=m.created_at,
     )
