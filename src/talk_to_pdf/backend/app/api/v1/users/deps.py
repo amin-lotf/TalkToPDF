@@ -9,7 +9,7 @@ from talk_to_pdf.backend.app.application.users.use_cases import RegisterUserUseC
 from talk_to_pdf.backend.app.application.users.use_cases.get_current_user import GetCurrentUserUseCase
 from talk_to_pdf.backend.app.core.security import BcryptPasswordHasher, decode_access_token
 from talk_to_pdf.backend.app.core.deps import get_uow
-from talk_to_pdf.backend.app.domain.users import UserNotFoundError
+from talk_to_pdf.backend.app.domain.users import UserNotFoundError, User, UserEmail
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
 from talk_to_pdf.backend.app.core.config import settings
 
@@ -44,24 +44,6 @@ async def get_current_user_use_case(
 
 DEV_USER = CurrentUserDTO(id=UUID('79376ad0-f4ea-42a7-ac46-5bbbbbe45f46'), email="dev@example.com", name="devmod", is_active=True)
 
-async def ensure_dev_user_exists(
-    uow: Annotated[UnitOfWork, Depends(get_uow)],
-) -> None:
-    if not settings.SKIP_AUTH:
-        return
-
-    async with uow:
-        # Adjust repo method names to yours:
-        existing = await uow.users.get_by_id(DEV_USER.id)
-        if existing is None:
-            # Create domain user however your domain expects
-            user = await uow.users.create(  # or uow.users.add(...)
-                id=DEV_USER.id,
-                email=DEV_USER.email,
-                name=DEV_USER.name,
-                is_active=True,
-                # password_hash=None etc, depending on schema
-            )
 
 async def get_jwt_payload(token: Annotated[str|None, Depends(oauth2_scheme)]) -> dict:
     if settings.SKIP_AUTH:
