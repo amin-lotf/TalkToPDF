@@ -1,3 +1,4 @@
+![Docker Pulls](https://img.shields.io/docker/pulls/aminook/talktopdf)
 # TalkToPDF
 
 Self-hosted RAG system for precise Q&A over PDFs using hybrid retrieval and streaming responses.
