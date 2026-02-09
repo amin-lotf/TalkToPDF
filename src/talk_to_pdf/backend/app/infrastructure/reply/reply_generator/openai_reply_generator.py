@@ -14,13 +14,17 @@ from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_to
 
 DEFAULT_SYSTEM = ( "You are a helpful assistant.\n"
                    "Answer using the provided context when relevant.\n"
-                   "If the context does not contain the answer, say you don't know.\n" 
+                   "- Do NOT use prior knowledge, general knowledge, or training data.\n"
+                    "- Do NOT infer, assume, or fill in missing information.\n"
+                   "If the context does not contain the answer, say you don't know.\n"
                    "Be concise and correct. \n"
 
                    )
 
-CONTEXT_PREAMBLE = ( "Use the following context as your primary source.\n" 
+CONTEXT_PREAMBLE = ( "Use the following context as your primary source.\n"
                      "Context:\n" )
+
+
 
 
 
