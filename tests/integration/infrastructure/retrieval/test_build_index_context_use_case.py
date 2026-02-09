@@ -69,17 +69,19 @@ class FixedEmbedderFactory:
 
 @dataclass
 class ReverseReranker:
-    async def rank(self, query: str, candidates: list[Chunk]) -> list[Chunk]:
-        return list(reversed(candidates))
+    async def rank(self, query: str, candidates: list[Chunk], *, top_n: int | None = None, ctx=None) -> list[Chunk]:
+        ranked = list(reversed(candidates))
+        return ranked[:top_n] if top_n is not None else ranked
 
 
 @dataclass
 class SlowReranker:
     delay_s: float = 0.5
 
-    async def rank(self, query: str, candidates: list[Chunk]) -> list[Chunk]:
+    async def rank(self, query: str, candidates: list[Chunk], *, top_n: int | None = None, ctx=None) -> list[Chunk]:
         await asyncio.sleep(self.delay_s)
-        return list(reversed(candidates))
+        ranked = list(reversed(candidates))
+        return ranked[:top_n] if top_n is not None else ranked
 
 
 @dataclass
@@ -238,6 +240,7 @@ async def test_build_index_context_blank_query_raises(uow_factory):
                 project_id=uuid4(),
                 index_id=uuid4(),
                 query="   ",
+                message_history=[],
                 top_k=5,
                 top_n=3,
                 rerank_timeout_s=0.2,
@@ -261,6 +264,7 @@ async def test_build_index_context_index_not_found_or_forbidden_raises(uow_facto
                 project_id=uuid4(),
                 index_id=uuid4(),
                 query="hello",
+                message_history=[],
                 top_k=5,
                 top_n=3,
                 rerank_timeout_s=0.2,
@@ -324,6 +328,7 @@ async def test_build_index_context_index_not_ready_raises(session, uow, uow_fact
                 project_id=project_out.id,
                 index_id=index_id,
                 query="hello",
+                message_history=[],
                 top_k=5,
                 top_n=3,
                 rerank_timeout_s=0.2,
@@ -365,6 +370,7 @@ async def test_build_index_context_happy_path_returns_top_n_and_embed_signature(
             project_id=project_id,
             index_id=index_id,
             query="hello",
+            message_history=[],
             top_k=5,
             top_n=2,
             rerank_timeout_s=0.2,
@@ -419,6 +425,7 @@ async def test_build_index_context_rerank_reorders_but_keeps_similarity_scores(
             project_id=project_id,
             index_id=index_id,
             query="hello",
+            message_history=[],
             top_k=3,
             top_n=3,
             rerank_timeout_s=1.0,
@@ -469,6 +476,7 @@ async def test_build_index_context_rerank_timeout_falls_back_to_similarity_order
             project_id=project_id,
             index_id=index_id,
             query="hello",
+            message_history=[],
             top_k=3,
             top_n=3,
             rerank_timeout_s=0.01,  # force timeout
@@ -507,6 +515,7 @@ async def test_build_index_context_embedder_returns_empty_vector_raises_invalid_
                 project_id=uuid4(),
                 index_id=uuid4(),
                 query="hello",
+                message_history=[],
                 top_k=3,
                 top_n=2,
                 rerank_timeout_s=0.2,

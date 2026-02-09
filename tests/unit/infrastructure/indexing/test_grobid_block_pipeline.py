@@ -7,7 +7,7 @@ from talk_to_pdf.backend.app.infrastructure.indexing.chunkers.block_chunker impo
 from talk_to_pdf.backend.app.infrastructure.indexing.extractors.grobid_tei_block_extractor import (
     GrobidTeiBlockExtractor,
 )
-
+from talk_to_pdf.backend.app.infrastructure.indexing.text_normalizer import normalize_block_text_by_kind
 
 TEI_SAMPLE = """
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
@@ -52,18 +52,22 @@ def test_default_block_chunker_groups_heads_and_paragraphs():
     blocks = [
         Block(
             text="Intro",
+            text_norm= normalize_block_text_by_kind(text="Intro", kind="section_head"),
             meta={"kind": "section_head", "div_index": 0, "head": "Intro", "xml_id": "h1", "targets": []},
         ),
         Block(
             text="First paragraph text under intro section.",
+            text_norm= normalize_block_text_by_kind(text="First paragraph text under intro section.", kind="paragraph"),
             meta={"kind": "paragraph", "div_index": 0, "head": "Intro", "xml_id": "p1", "targets": []},
         ),
         Block(
             text="Second paragraph text that should spill into the next chunk when combined.",
+            text_norm= normalize_block_text_by_kind(text="Second paragraph text that should spill into the next chunk when combined.", kind="paragraph"),
             meta={"kind": "paragraph", "div_index": 1, "head": "Body", "xml_id": "p2", "targets": []},
         ),
         Block(
             text="E = mc^2",
+            text_norm= normalize_block_text_by_kind(text="E = mc^2", kind="equation"),
             meta={
                 "kind": "equation",
                 "div_index": 1,
@@ -79,14 +83,24 @@ def test_default_block_chunker_groups_heads_and_paragraphs():
 
     chunks = chunker.chunk(blocks=blocks)
 
-    assert len(chunks) == 2
-    assert chunks[0].text.startswith("## Intro")
-    assert "First paragraph" in chunks[0].text
-    assert chunks[0].meta.get("dominant_head") == "Intro"
-    assert chunks[0].meta.get("div_range") == [0, 0]
+    assert len(chunks) == 3
 
-    assert chunks[1].blocks[-1].meta.get("kind") == "equation"
-    assert chunks[1].meta.get("div_range") == [1, 1]
-    assert "(1)" in chunks[1].text
-    assert chunks[1].meta.get("block_counts", {}).get("equation") == 1
+    first = chunks[0]
+    assert first.text.startswith("## Intro")
+    assert "First paragraph" in first.text
+    assert first.meta.get("dominant_head") == "Intro"
+    assert first.meta.get("div_index") == 0
+    assert first.meta.get("block_counts", {}).get("section_head") == 1
 
+    middle = chunks[1]
+    assert middle.meta.get("div_index") == 1
+    assert middle.meta.get("chunk_char_len") <= 60
+    assert middle.blocks[0].meta.get("synthetic_kind") == "split_block"
+    assert middle.meta.get("block_counts", {}).get("paragraph") == 1
+
+    tail = chunks[2]
+    assert tail.meta.get("div_index") == 1
+    assert tail.blocks[0].meta.get("synthetic_kind") == "split_block"
+    assert "(1)" in tail.text
+    assert "E = mc^2" in tail.text
+    assert tail.meta.get("block_counts", {}).get("equation") == 1

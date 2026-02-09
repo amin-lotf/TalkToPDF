@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession  # only for typing; not actually used
 from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
+from talk_to_pdf.backend.app.infrastructure.indexing.text_normalizer import normalize_block_text_by_kind
 
 
 @dataclass
@@ -46,8 +47,19 @@ class FakeBlockExtractor:
         self._blocks = blocks or [
             Block(
                 text="hello world",
+                text_norm=normalize_block_text_by_kind(text="hello world", kind="paragraph"),
                 meta={"div_index": 0, "kind": "paragraph", "head": None, "xml_id": None, "targets": []},
-            )
+            ),
+            Block(
+                text="second line",
+                text_norm=normalize_block_text_by_kind(text="second line", kind="paragraph"),
+                meta={"div_index": 0, "kind": "paragraph", "head": None, "xml_id": None, "targets": []},
+            ),
+            Block(
+                text="third thought",
+                text_norm=normalize_block_text_by_kind(text="third thought", kind="paragraph"),
+                meta={"div_index": 1, "kind": "paragraph", "head": None, "xml_id": None, "targets": []},
+            ),
         ]
         self._exc = raise_exc
         self.called_with: list[str] = []
@@ -66,12 +78,36 @@ class FakeBlockChunker:
     def chunk(self, *, blocks: list[Block]) -> list[ChunkDraft]:
         if self._chunks is not None:
             return list(self._chunks)
-        text = "\n\n".join(b.text for b in blocks if b.text)
+        chunks: list[ChunkDraft] = []
+        for idx, b in enumerate(blocks):
+            if not b.text:
+                continue
+            text = b.text
+            text_norm = b.text_norm or normalize_block_text_by_kind(text=text, kind=(b.meta or {}).get("kind", "paragraph"))
+            chunks.append(
+                ChunkDraft(
+                    chunk_index=idx,
+                    blocks=[b],
+                    text=text,
+                    text_norm=text_norm,
+                    meta={
+                        "block_count": 1,
+                        "div_index": (b.meta or {}).get("div_index"),
+                        "kind": (b.meta or {}).get("kind"),
+                    },
+                )
+            )
+
+        if chunks:
+            return chunks
+
+        # Fallback: preserve previous single-chunk behavior if no valid blocks
         return [
             ChunkDraft(
                 chunk_index=0,
                 blocks=list(blocks),
-                text=text,
+                text="",
+                text_norm="",
                 meta={"block_count": len(blocks)},
             )
         ]

@@ -14,8 +14,8 @@ from talk_to_pdf.backend.app.application.projects.use_cases.create_project impor
 from talk_to_pdf.backend.app.application.reply.dto import CreateChatInputDTO, CreateMessageInputDTO
 from talk_to_pdf.backend.app.application.reply.use_cases.create_chat import CreateChatUseCase
 from talk_to_pdf.backend.app.application.reply.use_cases.create_message import CreateChatMessageUseCase
+from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 
-from talk_to_pdf.backend.app.domain.reply import ChatRole
 from talk_to_pdf.backend.app.domain.reply.errors import ChatNotFoundOrForbidden
 
 from talk_to_pdf.backend.app.infrastructure.db.models import ChatModel, ChatMessageModel

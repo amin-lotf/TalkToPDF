@@ -142,7 +142,7 @@ class DeterministicRetrievalResultMerger:
                     )
 
         merged_matches = list(aggregated.values())
-        merged_matches.sort(key=lambda m: float(m.score), reverse=True)
+        merged_matches.sort(key=lambda m: (-float(m.score), m.chunk_index))
         selected = merged_matches[:top_k]
 
         score_by_id = {m.chunk_id: float(m.score) for m in selected}
