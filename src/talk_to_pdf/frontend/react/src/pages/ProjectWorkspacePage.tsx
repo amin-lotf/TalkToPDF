@@ -208,8 +208,6 @@ export function ProjectWorkspacePage() {
         ) : null}
 
         <CitationPanel message={selectedAssistantMessage} onBack={() => setShowMessageDetails(false)} />
-
-        <div className="grid gap-6 xl:grid-cols-2">{sidePanels}</div>
       </div>
     )
   }
