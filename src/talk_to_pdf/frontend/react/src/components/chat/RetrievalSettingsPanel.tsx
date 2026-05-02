@@ -28,7 +28,7 @@ export function RetrievalSettingsPanel({
     >
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="space-y-2 text-sm">
-          <span className="text-slate-400">Top-k</span>
+          <span className="block min-h-5 whitespace-nowrap text-slate-400">Top-k</span>
           <Input
             type="number"
             min={1}
@@ -45,7 +45,7 @@ export function RetrievalSettingsPanel({
           />
         </label>
         <label className="space-y-2 text-sm">
-          <span className="text-slate-400">Top-n</span>
+          <span className="block min-h-5 whitespace-nowrap text-slate-400">Top-n</span>
           <Input
             type="number"
             min={1}
@@ -61,7 +61,7 @@ export function RetrievalSettingsPanel({
           />
         </label>
         <label className="space-y-2 text-sm">
-          <span className="text-slate-400">Rerank timeout (s)</span>
+          <span className="block min-h-5 whitespace-nowrap text-slate-400">Rerank timeout (s)</span>
           <Input
             type="number"
             min={0}
