@@ -1,4 +1,5 @@
 """Runtime configuration loaded from environment variables and .env."""
+import json
 import sys
 from typing import Any
 
@@ -13,6 +14,7 @@ from talk_to_pdf.backend.app.core.const import (
     DEFAULT_EMBED_DIMENSIONS,
     DEFAULT_EMBED_MODEL,
     DEFAULT_EMBED_PROVIDER,
+    DEFAULT_CORS_ALLOWED_ORIGINS,
     DEFAULT_FILE_STORAGE_DIR,
     DEFAULT_GROBID_URL,
     DEFAULT_JWT_ALGORITHM,
@@ -80,6 +82,10 @@ class Settings(BaseSettings):
         default=DEFAULT_FILE_STORAGE_DIR,
         min_length=1,
         description="Base directory for storing uploaded files and artifacts.",
+    )
+    CORS_ALLOWED_ORIGINS: list[str] = Field(
+        default=DEFAULT_CORS_ALLOWED_ORIGINS,
+        description="Allowed browser origins for the React frontend and local previews.",
     )
 
     # API keys
@@ -235,6 +241,25 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.strip():
             return None
         return v
+
+    @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def _parse_cors_allowed_origins(cls, v: Any) -> list[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            raw = v.strip()
+            if not raw:
+                return []
+            if raw.startswith("["):
+                parsed = json.loads(raw)
+                if not isinstance(parsed, list):
+                    raise ValueError("CORS_ALLOWED_ORIGINS JSON value must be a list")
+                return [str(item).strip() for item in parsed if str(item).strip()]
+            return [item.strip() for item in raw.split(",") if item.strip()]
+        if isinstance(v, (list, tuple, set)):
+            return [str(item).strip() for item in v if str(item).strip()]
+        raise ValueError("CORS_ALLOWED_ORIGINS must be a list, JSON array, or comma-separated string")
 
     @field_validator("EMBED_DIMENSIONS", "REPLY_MAX_OUTPUT_TOKENS")
     @classmethod

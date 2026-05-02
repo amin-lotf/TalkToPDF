@@ -5,6 +5,7 @@
     "dev": "npm --prefix src/talk_to_pdf/frontend/react run dev --",
     "build": "npm --prefix src/talk_to_pdf/frontend/react run build",
     "preview": "npm --prefix src/talk_to_pdf/frontend/react run preview --",
-    "react:install": "npm --prefix src/talk_to_pdf/frontend/react ci"
+    "postinstall": "npm run react:install",
+    "react:install": "npm --prefix src/talk_to_pdf/frontend/react install"
   }
 }

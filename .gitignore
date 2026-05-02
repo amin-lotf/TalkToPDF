@@ -5,9 +5,13 @@ build/
 dist/
 wheels/
 *.egg-info
+*.tsbuildinfo
 
 # Virtual environments
 .venv
+
+# Node / frontend artifacts
+node_modules/
 
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
@@ -224,4 +228,3 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-

@@ -7,6 +7,12 @@ DEFAULT_JWT_SECRET_KEY = "change-me"
 DEFAULT_JWT_ALGORITHM = "HS256"
 DEFAULT_SKIP_AUTH = False
 DEFAULT_FILE_STORAGE_DIR = "tmpstorage"
+DEFAULT_CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+]
 
 DEFAULT_EMBED_PROVIDER = "openai"
 DEFAULT_EMBED_MODEL = "text-embedding-3-small"

@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #020617;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+}
+
+.markdown-body {
+  color: #e2e8f0;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body code {
+  border-radius: 0.5rem;
+  background-color: rgba(15, 23, 42, 0.9);
+  padding: 0.15rem 0.35rem;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(51, 65, 85, 0.9);
+  background-color: rgba(2, 6, 23, 0.95);
+  padding: 0.9rem 1rem;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+}
