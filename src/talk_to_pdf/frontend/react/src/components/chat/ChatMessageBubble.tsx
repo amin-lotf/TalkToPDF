@@ -2,7 +2,6 @@ import { Bot, Sparkles, User2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/format'
 import type { ChatMessage } from '@/types/chat'
@@ -14,19 +13,22 @@ export interface DisplayChatMessage extends ChatMessage {
 
 interface ChatMessageBubbleProps {
   message: DisplayChatMessage
-  onSelect?: (messageId: string) => void
+  onOpenDetails?: (messageId: string) => void
   selected?: boolean
 }
 
-export function ChatMessageBubble({ message, onSelect, selected = false }: ChatMessageBubbleProps) {
+export function ChatMessageBubble({
+  message,
+  onOpenDetails,
+  selected = false,
+}: ChatMessageBubbleProps) {
   const isAssistant = message.role === 'assistant'
   const sourceCount = message.citations?.chunks?.length ?? 0
+  const hasDetails = isAssistant && Boolean(message.metrics || message.citations)
 
   return (
     <div className={cn('flex', isAssistant ? 'justify-start' : 'justify-end')}>
-      <button
-        type="button"
-        disabled={!isAssistant}
+      <article
         className={cn(
           'max-w-3xl rounded-3xl border px-5 py-4 text-left transition',
           isAssistant
@@ -34,13 +36,7 @@ export function ChatMessageBubble({ message, onSelect, selected = false }: ChatM
               ? 'border-sky-500/40 bg-sky-500/10 shadow-panel'
               : 'border-slate-800 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-900'
             : 'border-slate-800/70 bg-slate-950/90',
-          !isAssistant && 'cursor-default',
         )}
-        onClick={() => {
-          if (isAssistant) {
-            onSelect?.(message.id)
-          }
-        }}
       >
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -53,11 +49,20 @@ export function ChatMessageBubble({ message, onSelect, selected = false }: ChatM
             </div>
           </div>
 
-          {isAssistant && sourceCount > 0 ? (
-            <Badge tone="success">
-              <Sparkles className="mr-1 h-3.5 w-3.5" />
-              {sourceCount} sources
-            </Badge>
+          {hasDetails ? (
+            <button
+              type="button"
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition',
+                selected
+                  ? 'border-sky-400/40 bg-sky-500/10 text-sky-100'
+                  : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/40 hover:bg-emerald-500/15',
+              )}
+              onClick={() => onOpenDetails?.(message.id)}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {sourceCount > 0 ? `${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}` : 'Details'}
+            </button>
           ) : null}
         </div>
 
@@ -70,7 +75,7 @@ export function ChatMessageBubble({ message, onSelect, selected = false }: ChatM
         ) : (
           <p className="whitespace-pre-wrap text-sm leading-7 text-slate-100">{message.content}</p>
         )}
-      </button>
+      </article>
     </div>
   )
 }

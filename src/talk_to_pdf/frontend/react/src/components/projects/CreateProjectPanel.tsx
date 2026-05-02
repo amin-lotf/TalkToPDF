@@ -4,13 +4,15 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Panel } from '@/components/ui/Panel'
+import { cn } from '@/lib/cn'
 import { formatFileSize } from '@/lib/format'
 
 interface CreateProjectPanelProps {
+  className?: string
   onCreate: (params: { name: string; file: File }) => Promise<void>
 }
 
-export function CreateProjectPanel({ onCreate }: CreateProjectPanelProps) {
+export function CreateProjectPanel({ className, onCreate }: CreateProjectPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [name, setName] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -44,8 +46,8 @@ export function CreateProjectPanel({ onCreate }: CreateProjectPanelProps) {
   return (
     <Panel
       title="New Project"
-      description="Each project currently ingests one primary PDF through the existing backend flow."
-      className="sticky top-24"
+      description="Upload a PDF to create a new project."
+      className={cn(className)}
     >
       <form
         className="space-y-4"
@@ -124,7 +126,7 @@ export function CreateProjectPanel({ onCreate }: CreateProjectPanelProps) {
                 <UploadCloud className="h-6 w-6" />
               </div>
               <p className="mt-4 text-sm font-medium text-slate-100">Drop a PDF or browse</p>
-              <p className="mt-1 text-sm text-slate-500">Grobid extraction and indexing start after creation.</p>
+              <p className="mt-1 text-sm text-slate-500">PDF files only.</p>
             </div>
           </button>
           <input

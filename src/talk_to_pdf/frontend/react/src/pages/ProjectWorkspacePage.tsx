@@ -1,6 +1,6 @@
-import { AlertCircle, FileClock, MessageSquarePlus, Search } from 'lucide-react'
+import { AlertCircle, FileClock, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 
 import { useApiClient } from '@/app/auth'
 import { useAppShell } from '@/app/shell'
@@ -35,13 +35,11 @@ function canRestartIndexing(status?: string | null) {
 export function ProjectWorkspacePage() {
   const api = useApiClient()
   const location = useLocation()
-  const navigate = useNavigate()
   const { chatId } = useParams()
   const {
     activeProjectId,
     chats,
     chatsLoading,
-    createChat,
     currentProject,
     indexReady,
     indexStatusError,
@@ -59,11 +57,10 @@ export function ProjectWorkspacePage() {
   const [composerValue, setComposerValue] = useState('')
   const [sending, setSending] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
+  const [showMessageDetails, setShowMessageDetails] = useState(false)
   const [workspaceError, setWorkspaceError] = useState<string | null>(
     () => (location.state as { startIndexingError?: string } | null)?.startIndexingError ?? null,
   )
-  const [newChatTitle, setNewChatTitle] = useState('')
-  const [creatingChat, setCreatingChat] = useState(false)
   const [settings, setSettings] = useState<RetrievalSettings>({
     topK: 40,
     topN: 10,
@@ -100,6 +97,10 @@ export function ProjectWorkspacePage() {
   }, [loadMessages])
 
   useEffect(() => {
+    setShowMessageDetails(false)
+  }, [chatId])
+
+  useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       if (!transcriptRef.current) {
         return
@@ -133,6 +134,7 @@ export function ProjectWorkspacePage() {
   )
 
   const activeChat = useMemo(() => chats.find((chat) => chat.id === chatId) ?? null, [chatId, chats])
+  const showDetailsView = showMessageDetails && Boolean(selectedAssistantMessage)
 
   if (projectLoading && !currentProject) {
     return (
@@ -180,6 +182,38 @@ export function ProjectWorkspacePage() {
         }
       : null
 
+  const sidePanels = (
+    <>
+      <IndexingStatusPanel
+        project={currentProject}
+        status={latestIndexStatus}
+        loading={indexStatusLoading}
+        error={indexStatusError}
+        onStart={handleStartIndexing}
+        onCancel={handleCancelIndexing}
+      />
+
+      <RetrievalSettingsPanel value={settings} onChange={setSettings} disabled={sending || !indexReady} />
+    </>
+  )
+
+  if (showDetailsView && selectedAssistantMessage) {
+    return (
+      <div className="space-y-6">
+        {workspaceError ? (
+          <div className="flex items-start gap-3 rounded-3xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{workspaceError}</span>
+          </div>
+        ) : null}
+
+        <CitationPanel message={selectedAssistantMessage} onBack={() => setShowMessageDetails(false)} />
+
+        <div className="grid gap-6 xl:grid-cols-2">{sidePanels}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-6">
@@ -203,52 +237,21 @@ export function ProjectWorkspacePage() {
             className="min-h-[420px]"
           />
         ) : !chatId ? (
-          <Panel title="Create a Chat" description="Chats stay attached to this project and keep their own conversation history.">
-            <div className="space-y-4">
-              <EmptyState
-                icon={<MessageSquarePlus className="h-6 w-6" />}
-                title="No chat selected"
-                description="Create a new chat to begin asking project-specific questions."
-                action={undefined}
-              />
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <input
-                    className="h-11 flex-1 rounded-2xl border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none"
-                    placeholder="Project briefing"
-                    value={newChatTitle}
-                    onChange={(event) => setNewChatTitle(event.target.value)}
-                  />
-                  <Button
-                    loading={creatingChat}
-                    onClick={async () => {
-                      if (!newChatTitle.trim()) {
-                        setWorkspaceError('Chat title is required.')
-                        return
-                      }
-
-                      setCreatingChat(true)
-                      setWorkspaceError(null)
-                      try {
-                        await createChat(newChatTitle.trim())
-                      } catch (error) {
-                        setWorkspaceError(error instanceof Error ? error.message : 'Failed to create chat.')
-                      } finally {
-                        setCreatingChat(false)
-                      }
-                    }}
-                  >
-                    Create chat
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Panel>
+          <EmptyState
+            icon={<Search className="h-6 w-6" />}
+            title="Choose a question"
+            description="Choose an existing question or create a new thread."
+            className="min-h-[420px]"
+          />
         ) : (
           <>
             <Panel
               title={activeChat?.title ?? 'Chat'}
-              description={chatsLoading ? 'Loading chat list…' : 'Streamed answers are reloaded from persisted messages to hydrate citations and metrics.'}
+              description={
+                chatsLoading
+                  ? 'Loading question list…'
+                  : 'Open answer details from the source badge on any assistant response.'
+              }
             >
               {messagesError ? (
                 <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -270,15 +273,18 @@ export function ProjectWorkspacePage() {
                     <ChatMessageBubble
                       key={message.id}
                       message={message}
-                      selected={message.id === selectedMessageId}
-                      onSelect={setSelectedMessageId}
+                      selected={showMessageDetails && message.id === selectedMessageId}
+                      onOpenDetails={(messageId) => {
+                        setSelectedMessageId(messageId)
+                        setShowMessageDetails(true)
+                      }}
                     />
                   ))
                 ) : (
                   <EmptyState
                     icon={<Search className="h-6 w-6" />}
                     title="Ask the first question"
-                    description="The backend will stream the answer and persist the final assistant message with citations."
+                    description="The backend will stream the answer and save its sources for later inspection."
                     className="min-h-[360px]"
                   />
                 )}
@@ -301,6 +307,7 @@ export function ProjectWorkspacePage() {
 
                 setComposerValue('')
                 setWorkspaceError(null)
+                setShowMessageDetails(false)
                 setMessages((currentMessages) => [
                   ...currentMessages,
                   {
@@ -375,21 +382,7 @@ export function ProjectWorkspacePage() {
         )}
       </div>
 
-      <aside className="space-y-6">
-        <IndexingStatusPanel
-          project={currentProject}
-          status={latestIndexStatus}
-          loading={indexStatusLoading}
-          error={indexStatusError}
-          onRefresh={() => refreshIndexStatus()}
-          onStart={handleStartIndexing}
-          onCancel={handleCancelIndexing}
-        />
-
-        <RetrievalSettingsPanel value={settings} onChange={setSettings} disabled={sending || !indexReady} />
-
-        <CitationPanel message={selectedAssistantMessage} />
-      </aside>
+      <aside className="space-y-6">{sidePanels}</aside>
     </div>
   )
 }

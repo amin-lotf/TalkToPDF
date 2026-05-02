@@ -2,23 +2,21 @@ import {
   FileText,
   Folders,
   LayoutDashboard,
-  LogOut,
   MessageSquareMore,
   MessageSquarePlus,
-  Plus,
   Trash2,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
-import { Badge } from '@/components/ui/Badge'
+import { CreateProjectPanel } from '@/components/projects/CreateProjectPanel'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/format'
 import type { Chat } from '@/types/chat'
-import type { IndexingStatus } from '@/types/indexing'
 import type { Project } from '@/types/project'
 
 interface AppSidebarProps {
@@ -27,33 +25,16 @@ interface AppSidebarProps {
   chats: Chat[]
   chatsError: string | null
   chatsLoading: boolean
-  currentProject: Project | null
   indexReady: boolean
-  latestIndexStatus: IndexingStatus | null
   onClose: () => void
   onCreateChat: (title: string) => Promise<void>
+  onCreateProject: (params: { name: string; file: File }) => Promise<void>
   onDeleteChat: (chatId: string) => Promise<void>
-  onLogout: () => void
   onNavigate: (href: string) => void
   onOpenProject: (projectId: string) => void
   open: boolean
   projects: Project[]
   projectsLoading: boolean
-  userName: string
-}
-
-function getStatusTone(status?: string | null) {
-  const normalized = (status ?? '').toLowerCase()
-  if (normalized === 'ready' || normalized === 'completed') {
-    return 'success' as const
-  }
-  if (normalized === 'failed' || normalized === 'error' || normalized === 'cancelled' || normalized === 'canceled') {
-    return 'danger' as const
-  }
-  if (normalized === 'pending' || normalized === 'running' || normalized === 'queued') {
-    return 'warning' as const
-  }
-  return 'default' as const
 }
 
 export function AppSidebar({
@@ -62,23 +43,27 @@ export function AppSidebar({
   chats,
   chatsError,
   chatsLoading,
-  currentProject,
   indexReady,
-  latestIndexStatus,
   onClose,
   onCreateChat,
+  onCreateProject,
   onDeleteChat,
-  onLogout,
   onNavigate,
   onOpenProject,
   open,
   projects,
   projectsLoading,
-  userName,
 }: AppSidebarProps) {
+  const location = useLocation()
   const [newChatTitle, setNewChatTitle] = useState('')
   const [creatingChat, setCreatingChat] = useState(false)
   const [chatActionError, setChatActionError] = useState<string | null>(null)
+
+  const onProjectsPage = location.pathname === '/projects'
+  const inProjectWorkspace = Boolean(activeProjectId) && location.pathname.startsWith('/projects/')
+  const showProjectLibrary = !onProjectsPage && !inProjectWorkspace
+  const showCreateProjectPanel = onProjectsPage
+  const showQuestionLibrary = inProjectWorkspace
 
   const submitChat = async () => {
     if (!newChatTitle.trim()) {
@@ -99,6 +84,14 @@ export function AppSidebar({
       setCreatingChat(false)
     }
   }
+
+  const navButtonClassName = (active: boolean) =>
+    cn(
+      'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition',
+      active
+        ? 'border-sky-500/40 bg-sky-500/10 text-slate-100'
+        : 'border-slate-800 bg-slate-900/60 text-slate-200 hover:border-slate-700 hover:bg-slate-900',
+    )
 
   return (
     <>
@@ -129,14 +122,14 @@ export function AppSidebar({
         <div className="app-scrollbar flex-1 overflow-y-auto px-4 py-4">
           <div className="space-y-2">
             <button
-              className="flex w-full items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-left text-sm text-slate-200"
+              className={navButtonClassName(location.pathname.startsWith('/dashboard'))}
               onClick={() => onNavigate('/dashboard')}
             >
               <LayoutDashboard className="h-4 w-4 text-sky-300" />
               Dashboard
             </button>
             <button
-              className="flex w-full items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-left text-sm text-slate-200"
+              className={navButtonClassName(location.pathname.startsWith('/projects'))}
               onClick={() => onNavigate('/projects')}
             >
               <Folders className="h-4 w-4 text-emerald-300" />
@@ -144,88 +137,85 @@ export function AppSidebar({
             </button>
           </div>
 
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Projects</p>
-              <Button variant="ghost" size="sm" onClick={() => onNavigate('/projects')}>
-                <Plus className="h-4 w-4" />
-                New
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              {projectsLoading ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-slate-400">
-                  <Spinner />
-                  Loading projects…
-                </div>
-              ) : null}
-
-              {!projectsLoading && !projects.length ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-500">
-                  No projects yet.
-                </div>
-              ) : null}
-
-              {projects.map((project) => {
-                const isActive = activeProjectId === project.id
-
-                return (
-                  <button
-                    key={project.id}
-                    className={cn(
-                      'w-full rounded-2xl border px-4 py-3 text-left transition',
-                      isActive
-                        ? 'border-sky-500/40 bg-sky-500/10'
-                        : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900',
-                    )}
-                    onClick={() => onOpenProject(project.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-xl bg-slate-950/80 p-2 text-sky-300">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-100">{project.name}</p>
-                        <p className="truncate text-xs text-slate-400">
-                          {project.primary_document.original_filename}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">{formatDateTime(project.created_at)}</p>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {currentProject ? (
+          {showProjectLibrary ? (
             <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Workspace</p>
-                <Badge tone={getStatusTone(latestIndexStatus?.status)}>
-                  {latestIndexStatus?.status ?? 'Not indexed'}
-                </Badge>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Projects</p>
+
+              <div className="space-y-2">
+                {projectsLoading ? (
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-slate-400">
+                    <Spinner />
+                    Loading projects…
+                  </div>
+                ) : null}
+
+                {!projectsLoading && !projects.length ? (
+                  <div className="rounded-2xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-500">
+                    No projects yet.
+                  </div>
+                ) : null}
+
+                {projects.map((project) => {
+                  const isActive = activeProjectId === project.id
+
+                  return (
+                    <button
+                      key={project.id}
+                      className={cn(
+                        'w-full rounded-2xl border px-4 py-3 text-left transition',
+                        isActive
+                          ? 'border-sky-500/40 bg-sky-500/10'
+                          : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900',
+                      )}
+                      onClick={() => onOpenProject(project.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-slate-950/80 p-2 text-sky-300">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-slate-100">{project.name}</p>
+                          <p className="truncate text-xs text-slate-400">
+                            {project.primary_document.original_filename}
+                          </p>
+                          <p className="mt-2 text-xs text-slate-500">{formatDateTime(project.created_at)}</p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {showCreateProjectPanel ? (
+            <div className="mt-6">
+              <CreateProjectPanel
+                onCreate={async (params) => {
+                  await onCreateProject(params)
+                  onClose()
+                }}
+              />
+            </div>
+          ) : null}
+
+          {showQuestionLibrary ? (
+            <div className="mt-6 space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Questions</p>
+                <p className="mt-2 text-sm text-slate-400">Create a thread or reopen an existing one.</p>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3">
-                <p className="text-sm font-medium text-slate-100">{currentProject.name}</p>
-                <p className="mt-1 text-xs text-slate-400">{currentProject.primary_document.original_filename}</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Chats</p>
-                <Button variant="ghost" size="sm" disabled={!indexReady} onClick={() => void submitChat()}>
-                  <MessageSquarePlus className="h-4 w-4" />
-                  Create
-                </Button>
-              </div>
-
-              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
+              <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
                 <Input
                   value={newChatTitle}
-                  onChange={(event) => setNewChatTitle(event.target.value)}
-                  placeholder={indexReady ? 'New chat title' : 'Indexing required before chat'}
+                  onChange={(event) => {
+                    setNewChatTitle(event.target.value)
+                    if (chatActionError) {
+                      setChatActionError(null)
+                    }
+                  }}
+                  placeholder={indexReady ? 'New question thread' : 'Finish indexing before creating chats'}
                   disabled={!indexReady || creatingChat}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -234,9 +224,19 @@ export function AppSidebar({
                     }
                   }}
                 />
+                <Button
+                  className="w-full"
+                  size="sm"
+                  disabled={!indexReady}
+                  loading={creatingChat}
+                  onClick={() => void submitChat()}
+                >
+                  {!creatingChat ? <MessageSquarePlus className="h-4 w-4" /> : null}
+                  New question
+                </Button>
                 {chatActionError ? <p className="text-xs text-rose-300">{chatActionError}</p> : null}
                 {!indexReady ? (
-                  <p className="text-xs text-slate-500">Chats unlock when the latest index is ready.</p>
+                  <p className="text-xs text-slate-500">Questions unlock when the latest index is ready.</p>
                 ) : null}
               </div>
 
@@ -244,7 +244,7 @@ export function AppSidebar({
                 {chatsLoading ? (
                   <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm text-slate-400">
                     <Spinner />
-                    Loading chats…
+                    Loading questions…
                   </div>
                 ) : null}
 
@@ -256,12 +256,13 @@ export function AppSidebar({
 
                 {!chatsLoading && !chats.length ? (
                   <div className="rounded-2xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-500">
-                    No chats yet.
+                    No questions yet.
                   </div>
                 ) : null}
 
                 {chats.map((chat) => {
                   const isActive = activeChatId === chat.id
+
                   return (
                     <div
                       key={chat.id}
@@ -309,19 +310,6 @@ export function AppSidebar({
               </div>
             </div>
           ) : null}
-        </div>
-
-        <div className="border-t border-slate-800/80 px-4 py-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
-            <p className="truncate text-sm font-medium text-slate-100">{userName}</p>
-            <button
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
-              onClick={onLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
-          </div>
         </div>
       </aside>
     </>

@@ -1,4 +1,4 @@
-import { Menu, RefreshCw } from 'lucide-react'
+import { LogOut, Menu, RefreshCw } from 'lucide-react'
 import {
   Outlet,
   useLocation,
@@ -235,6 +235,25 @@ export function AppLayout() {
     [activeChatId, activeProjectId, api, navigate, refreshChats],
   )
 
+  const handleCreateProject = useCallback(
+    async ({ file, name }: { name: string; file: File }) => {
+      const created = await api.createProject({ name, file })
+      let startIndexingError: string | null = null
+
+      try {
+        await api.startIndexing(created.id, created.primary_document.id)
+      } catch (error) {
+        startIndexingError = error instanceof Error ? error.message : 'Indexing did not start automatically.'
+      }
+
+      await refreshProjects()
+      navigate(`/projects/${created.id}`, {
+        state: startIndexingError ? { startIndexingError } : undefined,
+      })
+    },
+    [api, navigate, refreshProjects],
+  )
+
   const handleOpenProject = useCallback(
     (projectId: string) => {
       navigate(`/projects/${projectId}`)
@@ -330,19 +349,16 @@ export function AppLayout() {
           chats={chats}
           chatsError={chatsError}
           chatsLoading={chatsLoading}
-          currentProject={currentProject}
           indexReady={isIndexReady(latestIndexStatus?.status)}
-          latestIndexStatus={latestIndexStatus}
           onClose={() => setSidebarOpen(false)}
           onCreateChat={handleCreateChat}
+          onCreateProject={handleCreateProject}
           onDeleteChat={handleDeleteChat}
-          onLogout={handleLogout}
           onNavigate={handleNavigate}
           onOpenProject={handleOpenProject}
           open={sidebarOpen}
           projects={projects}
           projectsLoading={projectsLoading}
-          userName={user?.name ?? user?.email ?? 'User'}
         />
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -364,29 +380,43 @@ export function AppLayout() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    void refreshProjects()
-                    if (activeProjectId) {
-                      void refreshProject()
-                      void refreshChats()
-                      void refreshIndexStatus()
-                    }
-                  }}
-                >
-                  {projectsLoading || projectLoading || chatsLoading || indexStatusLoading ? (
-                    <Spinner />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Refresh
-                </Button>
-                <div className="hidden rounded-2xl border border-slate-800 bg-slate-900/80 px-3 py-2 text-right sm:block">
-                  <p className="text-sm font-medium text-slate-100">{user?.name ?? 'Signed in'}</p>
-                  <p className="text-xs text-slate-400">{user?.email}</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 rounded-2xl border border-slate-800 bg-slate-900/80 p-1.5">
+                  <div className="hidden min-w-0 rounded-xl bg-slate-950/70 px-3 py-2 text-left sm:block">
+                    <p className="truncate text-sm font-medium text-slate-100">{user?.name ?? 'Signed in'}</p>
+                    <p className="truncate text-xs text-slate-400">{user?.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 rounded-xl px-3"
+                    onClick={() => {
+                      void refreshProjects()
+                      if (activeProjectId) {
+                        void refreshProject()
+                        void refreshChats()
+                        void refreshIndexStatus()
+                      }
+                    }}
+                    aria-label="Refresh workspace data"
+                  >
+                    {projectsLoading || projectLoading || chatsLoading || indexStatusLoading ? (
+                      <Spinner />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    <span className="hidden md:inline">Refresh</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 rounded-xl px-3"
+                    onClick={handleLogout}
+                    aria-label="Log out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="hidden md:inline">Logout</span>
+                  </Button>
                 </div>
               </div>
             </div>

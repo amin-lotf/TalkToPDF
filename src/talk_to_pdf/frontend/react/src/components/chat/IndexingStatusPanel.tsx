@@ -1,8 +1,9 @@
-import { AlertCircle, CircleStop, FileText, Play, RefreshCw } from 'lucide-react'
+import { AlertCircle, CircleStop, FileText, Play } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Panel } from '@/components/ui/Panel'
+import { Spinner } from '@/components/ui/Spinner'
 import { formatDateTime, formatFileSize } from '@/lib/format'
 import type { IndexingStatus } from '@/types/indexing'
 import type { Project } from '@/types/project'
@@ -11,7 +12,6 @@ interface IndexingStatusPanelProps {
   error: string | null
   loading: boolean
   onCancel: (() => Promise<void>) | null
-  onRefresh: () => Promise<void>
   onStart: (() => Promise<void>) | null
   project: Project | null
   status: IndexingStatus | null
@@ -35,7 +35,6 @@ export function IndexingStatusPanel({
   error,
   loading,
   onCancel,
-  onRefresh,
   onStart,
   project,
   status,
@@ -96,6 +95,11 @@ export function IndexingStatusPanel({
             </div>
           ) : null}
         </>
+      ) : loading ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
+          <Spinner />
+          Loading project status…
+        </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-800 px-4 py-3 text-sm text-slate-500">
           No indexing job has been recorded for this project yet.
@@ -110,10 +114,6 @@ export function IndexingStatusPanel({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" loading={loading} onClick={() => void onRefresh()}>
-          {!loading ? <RefreshCw className="h-4 w-4" /> : null}
-          Refresh
-        </Button>
         {onStart ? (
           <Button size="sm" onClick={() => void onStart()}>
             <Play className="h-4 w-4" />
