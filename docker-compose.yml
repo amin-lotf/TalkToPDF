@@ -1,6 +1,7 @@
 services:
   app:
-    image: aminook/talktopdf:0.1.0
+    build: .
+    image: aminook/talktopdf:0.2.0
     container_name: talk_app
     env_file:
       - .env.docker
@@ -13,6 +14,43 @@ services:
     depends_on:
       - db
       - grobid
+
+  streamlit:
+    image: aminook/talktopdf:0.2.0
+    profiles:
+      - streamlit
+    env_file:
+      - .env.docker
+    environment:
+      API_BASE_URL: http://app:8000/api/v1
+    command: >
+      sh -c "streamlit run src/talk_to_pdf/frontend/streamlit_app/main.py
+      --server.address ${STREAMLIT_HOST:-0.0.0.0}
+      --server.port ${STREAMLIT_PORT:-8501}"
+    ports:
+      - "${STREAMLIT_PORT:-8501}:${STREAMLIT_PORT:-8501}"
+    depends_on:
+      - app
+
+  react:
+    image: node:22-alpine
+    container_name: talk_app_react
+    profiles:
+      - react
+    working_dir: /app/src/talk_to_pdf/frontend/react
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_WS_URL: ws://localhost:8000/api/v1/live/ws
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - react_node_modules:/app/src/talk_to_pdf/frontend/react/node_modules
+    ports:
+      - "${REACT_PORT:-5173}:${REACT_PORT:-5173}"
+    depends_on:
+      - app
+
 
   db:
     image: pgvector/pgvector:pg16
@@ -33,3 +71,4 @@ services:
 
 volumes:
   pgdata:
+  react_node_modules:

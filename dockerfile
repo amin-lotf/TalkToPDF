@@ -2,8 +2,11 @@ FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-
-
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_NO_CACHE=1 \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
 
 RUN apt-get update -o Acquire::Retries=5 \
  && apt-get install -y --no-install-recommends \
@@ -11,24 +14,16 @@ RUN apt-get update -o Acquire::Retries=5 \
     libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install -U uv
+RUN pip install --no-cache-dir -U uv
 
+COPY pyproject.toml uv.lock ./
 
-
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
-
-
-
-COPY pyproject.toml  uv.lock .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-dev
 
-COPY . /app
+COPY . .
 
-RUN uv sync --no-editable --locked --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
-
-
-CMD ["talk"]
-
+CMD ["sh", "-c", "alembic upgrade head && uvicorn talk_to_pdf.backend.app.main:app  --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}"]
