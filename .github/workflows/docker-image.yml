@@ -31,5 +31,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            aminook/talk_to_pdf:latest
-            aminook/talk_to_pdf:0.2.0
+            aminook/talktopdf:latest
+            aminook/talktopdf:0.2.0
