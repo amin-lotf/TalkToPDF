@@ -1,127 +1,268 @@
 ![Docker Pulls](https://img.shields.io/docker/pulls/aminook/talktopdf)
-# TalkToPDF
 
-Self-hosted RAG system for precise Q&A over PDFs using hybrid retrieval and streaming responses.
+# TalkToPDF — AI chat over PDFs with citations
 
-## What You Can Do in 60 Seconds
+A self-hosted RAG application that turns a PDF into a searchable chat workspace, with grounded answers, source citations, and optional Streamlit or React frontends.
 
-- Upload a PDF via Streamlit UI and create a project
-- Index PDFs asynchronously with structure-aware extraction and embeddings
-- Ask questions and receive streaming answers with source citations
-- Manage multiple chats per project with full conversation history
-- Use REST API endpoints for programmatic integration
+## Demo
 
-## Features
+Coming soon: a short walkthrough showing PDF upload, indexing, chat, and citation inspection in the current UI.
 
-- Grobid-based PDF extraction preserving document structure (paragraphs, sections, figures)
-- Hybrid retrieval combining pgvector similarity search and PostgreSQL full-text search
-- Multi-query rewriting for better semantic matching across conversation context
-- Configurable LLM-based reranking before final answer generation
-- Streaming OpenAI chat responses with token usage tracking
-- JWT authentication
-- Async SQLAlchemy with unit-of-work pattern and dependency injection
-- Multiprocess indexing with cancellation support
+## Why This Project
+
+Many teams already have valuable information inside PDFs, but that information is slow to search and hard to reuse in day-to-day work.
+
+TalkToPDF is built to turn those static documents into a practical question-answering interface that can be deployed for internal teams or adapted for client work.
+
+## What It Solves
+
+Instead of manually scanning long PDFs, users can:
+
+- upload a document into a dedicated project
+- index it for retrieval
+- ask natural-language questions
+- get answers backed by citations from the source document
+- keep persistent chat history per project
+
+## Use Cases
+
+- Legal and compliance document review
+- Research paper exploration
+- Internal knowledge assistants for manuals and SOPs
+- Client-specific document Q&A portals
+- Private, self-hosted AI assistants over sensitive PDFs
+
+## What You Can Do
+
+- Create a project around a PDF
+- Index the document asynchronously
+- Chat with streaming answers
+- Review cited source chunks behind each answer
+- Manage multiple chats inside one project
+- Use either the API, Streamlit UI, or React UI
+
+## Key Features
+
+- Structure-aware PDF extraction with Grobid
+- Hybrid retrieval using pgvector similarity search plus PostgreSQL full-text search
+- Query rewriting for better retrieval across chat history
+- Optional reranking before final answer generation
+- Streaming replies with stored citations and response metrics
+- JWT-based authentication
+- React frontend for a more polished client-facing workspace
+- Streamlit frontend for a simple lightweight interface
+
+## Design Highlights
+
+- **Grounded answers, not generic chat**  
+  Replies are built from retrieved document chunks and stored with citations for later review.
+
+- **Built for real document workflows**  
+  Projects, chats, indexing state, and uploaded files are persisted instead of living in a temporary demo session.
+
+- **Retrieval quality over toy behavior**  
+  The system combines vector search, full-text search, query rewriting, and reranking to improve answer quality.
+
+- **Client-ready UI options**  
+  The same backend can serve API consumers, a quick Streamlit app, or a React frontend.
 
 ## Architecture at a Glance
 
-FastAPI backend serves REST API at `/api/v1` with auth, projects, indexing, chat, and reply endpoints. Streamlit frontend runs alongside. The `talk` entrypoint starts both the FastAPI backend (8000) and Streamlit UI (8501).
-. Indexing spawns separate processes that call Grobid to convert PDF to TEI XML, chunk normalized text blocks, embed via OpenAI, and persist to PostgreSQL with pgvector and tsvector GIN indexes. Retrieval flow: rewrite user query with chat history, embed query, search vector and FTS indexes in parallel, merge results with configurable weights, optionally rerank, then stream LLM reply with citations. Files stored on local filesystem under `FILE_STORAGE_DIR`.
+- FastAPI backend for auth, projects, indexing, and chat
+- PostgreSQL with `pgvector` and full-text search for retrieval
+- Grobid for structure-aware PDF extraction
+- OpenAI models for embeddings, rewriting, reranking, and answers
+- Optional Streamlit and React frontends
+
+```mermaid
+flowchart LR
+    User --> UI["React or Streamlit UI"]
+    UI --> API["FastAPI API"]
+    API --> Auth["Auth + Projects + Chats"]
+    API --> Indexing["Indexing Pipeline"]
+    API --> Retrieval["Hybrid Retrieval"]
+    Indexing --> Grobid["Grobid"]
+    Retrieval --> OpenAI["OpenAI"]
+    API --> DB["PostgreSQL + pgvector"]
+```
 
 ## Tech Stack
 
-- **Backend**: FastAPI, Pydantic Settings, async SQLAlchemy 2.0, python-jose JWT, uvicorn
-- **AI**: LangChain OpenAI (embeddings, chat, reranking), tiktoken
-- **Storage**: PostgreSQL with pgvector extension, tsvector GIN indexes, filesystem for uploads
-- **PDF Processing**: Grobid TEI extraction, custom block chunker with overlap
-- **Frontend**: Streamlit multipage app
-- **Deployment**: Docker Compose, uv package manager with lockfile
+- Python
+- FastAPI
+- Streamlit
+- React + Vite + TypeScript
+- PostgreSQL
+- pgvector
+- SQLAlchemy + Alembic
+- OpenAI API
+- Grobid
+- Docker
+
 
 ## Quickstart with Docker Compose
 
-Use the prebuilt image from Docker Hub:
+Prerequisites:
+
+- Docker
+- Docker Compose
+- OpenAI API key
 
 ```bash
-# 1. Create .env.docker with your OpenAI API key
+# 1. Create the Docker env file
 cp .env.docker.example .env.docker
-# Edit .env.docker and set OPENAI_API_KEY=sk-...
 
-# 2. Start all services (app, PostgreSQL with pgvector, Grobid)
-docker compose -f docker-compose.yaml  up -d
+# 2. Edit .env.docker and set OPENAI_API_KEY
 
-# 3. Access the services
-# Streamlit UI: http://localhost:8501
-# FastAPI docs: http://localhost:8000/docs
-# Health check: http://localhost:8000/health
+# 3. Start the backend stack
+docker compose up --build
 ```
 
-The compose file uses `aminook/talktopdf:0.1.0` from Docker Hub. PostgreSQL data persists in the `pgdata` volume.
+Access services:
 
-## Development with Docker Compose
+- FastAPI API: `http://localhost:8000`
+- FastAPI docs: `http://localhost:8000/docs`
+- Health check: `http://localhost:8000/health`
 
-Build from source and run with hot reload:
+### Optional Streamlit UI with Docker
 
 ```bash
-# 1. Create .env.docker
-cp .env.docker.example .env.docker
-# Edit and set OPENAI_API_KEY
-
-# 2. Build and start dev environment
-docker compose -f docker-compose-dev.yml up --build
-
-# 3. Run tests inside container
-docker compose -f docker-compose-dev.yml exec app pytest
-
-# 4. Access Grobid directly (exposed on host)
-# http://localhost:8070
+docker compose --profile streamlit up --build
 ```
 
-The dev compose builds from your local checkout, enables FastAPI reload, and includes health checks.
+Streamlit URL:
+
+- Streamlit UI: `http://localhost:8501`
+
+### Optional React UI with Docker
+
+```bash
+docker compose --profile react up --build
+```
+
+React URL:
+
+- React UI: `http://localhost:5173`
+
+### Optional Both UIs with Docker
+
+```bash
+docker compose --profile streamlit --profile react up --build
+```
+
+Notes:
+
+- The compose stack starts FastAPI, PostgreSQL with `pgvector`, and Grobid
+- The Streamlit frontend is available through the `streamlit` profile
+- The React frontend is available through the `react` profile
+- The container runs Alembic migrations before starting the API
+- There is no documented `docker compose -f docker-compose-dev.yml` flow anymore
+
+## Local Development
+
+Use Docker for infrastructure, then run the app locally.
+
+```bash
+# 1. Start PostgreSQL and Grobid
+docker compose up -d db grobid
+
+# 2. Create local env
+cp .env.example .env
+
+# 3. Edit .env and set OPENAI_API_KEY
+
+# 4. Install Python dependencies
+uv sync --dev
+
+# 5. Run database migrations
+uv run alembic upgrade head
+```
+
+### Run the Backend
+
+```bash
+uv run uvicorn talk_to_pdf.backend.app.main:app --reload
+```
+
+Backend URLs:
+
+- API: `http://localhost:8000`
+- Docs: `http://localhost:8000/docs`
+
+### Run the Streamlit UI
+
+```bash
+uv run streamlit run src/talk_to_pdf/frontend/streamlit_app/main.py
+```
+
+Streamlit URL:
+
+- Streamlit UI: `http://localhost:8501`
+
+The Streamlit app reads `API_BASE_URL`, which defaults to `http://127.0.0.1:8000/api/v1`.
+
+### Run the React UI
+
+Create `src/talk_to_pdf/frontend/react/.env` with:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+Then run:
+
+```bash
+npm install
+npm run dev
+```
+
+React URL:
+
+- React UI: `http://localhost:5173`
+
+Package scripts:
+
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
+
+### Run Tests
+
+```bash
+uv run pytest
+```
 
 ## Configuration
 
-All settings load from environment variables via Pydantic. Required:
+Main environment variables:
 
-- `OPENAI_API_KEY`: OpenAI API key for embeddings, chat, reranking, query rewriting
-- `SQLALCHEMY_DATABASE_URL`: Async PostgreSQL connection string (postgresql+asyncpg://...)
+- `OPENAI_API_KEY` — required for embeddings, query rewriting, reranking, and answer generation
+- `SQLALCHEMY_DATABASE_URL` — PostgreSQL connection string
+- `GROBID_URL` — Grobid service URL
+- `FILE_STORAGE_DIR` — local storage path for uploaded PDFs
+- `API_BASE_URL` — API base URL used by Streamlit
+- `VITE_API_BASE_URL` — API base URL used by React
 
-Optional (defaults in `src/talk_to_pdf/backend/app/core/const.py`):
+See `.env.example` and `.env.docker.example` for the full current configuration.
 
-- `JWT_SECRET_KEY`: Secret for signing JWT tokens (default: "change-me")
-- `JWT_ALGORITHM`: JWT algorithm (default: "HS256")
-- `FILE_STORAGE_DIR`: Local directory for uploaded PDFs and artifacts (default: "tmpstorage")
-- `GROBID_URL`: Grobid service endpoint (default: "http://grobid:8070")
-- `EMBED_MODEL`: OpenAI embedding model (default: "text-embedding-3-small")
-- `EMBED_BATCH_SIZE`: Batch size for embedding requests (default: 16)
-- `CHUNKER_MAX_CHARS`: Max characters per chunk (default: 3000)
-- `CHUNKER_OVERLAP`: Overlap between chunks (default: 500)
-- `REPLY_MODEL`: OpenAI chat model (default: "gpt-4o-mini")
-- `REPLY_TEMPERATURE`: Temperature for reply generation (default: 0.2)
-- `QUERY_REWRITER_MODEL`: Model for query rewriting (default: "gpt-4o-mini")
-- `QUERY_REWRITER_MAX_TURN`: Max conversation turns for rewriting (default: 6)
-- `RERANKER_MODEL`: Model for reranking chunks (default: "gpt-4o-mini")
-- `RETRIEVAL_MERGER_WEIGHT_VEC`: Vector search weight (default: 0.65)
-- `RETRIEVAL_MERGER_WEIGHT_FTS`: Full-text search weight (default: 0.35)
-- `MAX_TOP_K`: Max chunks from initial retrieval (default: 20)
-- `MAX_TOP_N`: Max chunks after reranking (default: 5)
-- `API_BASE_URL`: Frontend API endpoint (default: "http://127.0.0.1:8000/api/v1")
+## Design Decisions
 
-See `.env.example` for local development and `.env.docker.example` for Docker Compose.
+- **One primary PDF per project**: the current workflow is centered around a single uploaded document for each project
+- **Hybrid retrieval**: vector similarity and PostgreSQL full-text search are merged before answer generation
+- **Async indexing**: PDF extraction and embedding run as background indexing jobs
+- **Persistent chat and citations**: answers, chats, and citation metadata are stored for later review
+- **Frontend flexibility**: React and Streamlit sit on top of the same FastAPI backend
 
-## For Clients and Freelancing
+## Roadmap
 
-This project demonstrates production-grade RAG architecture suitable for custom deployments. Typical paid extensions:
+- [ ] Demo video
+- [ ] Hosted demo
+- [ ] Multi-document projects
+- [ ] Cloud object storage support
+- [ ] Additional model providers
+- [x] React frontend
+- [x] Streaming answers with citations
 
-1. **Multi-document Projects**: Support multiple PDFs per project with cross-document retrieval and citation tracking
-2. **S3-Compatible Storage**: Replace filesystem storage with MinIO/S3 for scalable cloud deployments
-3. **OAuth Integration**: Add OAuth2 providers (Google, Microsoft) alongside JWT for enterprise SSO
-4. **Alternative LLM Providers**: Integrate Anthropic Claude, Azure OpenAI, or local models (Ollama, vLLM) with provider abstraction
-5. **Observability and Metrics**: Add OpenTelemetry tracing, Prometheus metrics for latency/costs, structured logging with correlation IDs
+## Portfolio Note
 
-
-Common client use cases:
-
-- **Legal/Compliance Teams**: Search contract libraries, policy documents, and regulatory filings with audit trails
-- **Research Organizations**: Query academic papers, technical reports, and internal documentation with citation preservation
-- **Customer Support**: Build knowledge base chatbots over product manuals, troubleshooting guides, and FAQ documents
-
-This repository serves as a strong starting point for production RAG systems and can be adapted to client-specific constraints, data sources, and deployment environments.
+This project is meant to show practical RAG engineering beyond a basic chatbot: document ingestion, hybrid retrieval, answer grounding, async indexing, persistent state, and multiple frontend options on top of one backend platform.
