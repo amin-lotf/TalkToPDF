@@ -152,6 +152,7 @@ docker compose --profile streamlit --profile react up --build
 
 Notes:
 
+- The Docker image tag used by the compose services is `aminook/talktopdf:0.2.0`
 - The compose stack starts FastAPI, PostgreSQL with `pgvector`, and Grobid
 - The Streamlit frontend is available through the `streamlit` profile
 - The React frontend is available through the `react` profile
