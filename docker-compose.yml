@@ -15,7 +15,9 @@ services:
       - grobid
 
   streamlit:
+    build: .
     image: aminook/talktopdf:0.2.0
+    container_name: talk_app_streamlit
     profiles:
       - streamlit
     env_file:
