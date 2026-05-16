@@ -7,5 +7,11 @@
     "preview": "npm --prefix src/talk_to_pdf/frontend/react run preview --",
     "postinstall": "npm run react:install",
     "react:install": "npm --prefix src/talk_to_pdf/frontend/react install"
+  },
+  "dependencies": {
+    "katex": "^0.16.46",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   }
 }

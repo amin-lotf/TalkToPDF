@@ -1,4 +1,4 @@
-![Docker Pulls](https://img.shields.io/docker/pulls/aminook/talktopdf)
+****![Docker Pulls](https://img.shields.io/docker/pulls/aminook/talktopdf)
 
 # TalkToPDF — AI chat over PDFs with citations
 
@@ -266,4 +266,4 @@ See `.env.example` and `.env.docker.example` for the full current configuration.
 
 ## Portfolio Note
 
-This project is meant to show practical RAG engineering beyond a basic chatbot: document ingestion, hybrid retrieval, answer grounding, async indexing, persistent state, and multiple frontend options on top of one backend platform.
+This project is meant to show practical RAG engineering beyond a basic chatbot: document ingestion, hybrid retrieval, answer grounding, async indexing, persistent state, and multiple frontend options on top of one backend platform.****

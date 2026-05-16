@@ -48,6 +48,13 @@ select {
 
 .markdown-body {
   color: #e2e8f0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body > * {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .markdown-body > :first-child {
@@ -58,13 +65,48 @@ select {
   margin-bottom: 0;
 }
 
-.markdown-body code {
+.markdown-body > * + * {
+  margin-top: 0.9rem;
+}
+
+.markdown-body p,
+.markdown-body li {
+  line-height: 1.75;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.35rem;
+}
+
+.markdown-body ul {
+  list-style: disc;
+}
+
+.markdown-body ol {
+  list-style: decimal;
+}
+
+.markdown-body li + li {
+  margin-top: 0.35rem;
+}
+
+.markdown-body a {
+  color: #7dd3fc;
+  text-decoration: underline;
+  text-decoration-color: rgba(14, 165, 233, 0.45);
+  text-underline-offset: 0.18em;
+}
+
+.markdown-body :not(pre) > code {
   border-radius: 0.5rem;
   background-color: rgba(15, 23, 42, 0.9);
   padding: 0.15rem 0.35rem;
+  word-break: break-word;
 }
 
 .markdown-body pre {
+  max-width: 100%;
   overflow-x: auto;
   border-radius: 0.85rem;
   border: 1px solid rgba(51, 65, 85, 0.9);
@@ -75,4 +117,32 @@ select {
 .markdown-body pre code {
   background-color: transparent;
   padding: 0;
+  word-break: normal;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid rgba(56, 189, 248, 0.45);
+  padding-left: 1rem;
+  color: #cbd5e1;
+}
+
+.markdown-body .katex {
+  font-size: 1.02em;
+}
+
+.markdown-body .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2rem 0.1rem;
+}
+
+.markdown-body .katex-display > .katex {
+  min-width: max-content;
+}
+
+.markdown-cursor {
+  display: inline-block;
+  margin-left: 0.15rem;
+  color: #7dd3fc;
 }

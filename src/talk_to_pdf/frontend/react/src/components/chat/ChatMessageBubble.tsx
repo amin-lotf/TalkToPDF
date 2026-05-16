@@ -1,7 +1,6 @@
 import { Bot, Sparkles, User2 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
+import { MarkdownMessage } from '@/components/chat/MarkdownMessage'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/format'
 import type { ChatMessage } from '@/types/chat'
@@ -30,7 +29,7 @@ export function ChatMessageBubble({
     <div className={cn('flex', isAssistant ? 'justify-start' : 'justify-end')}>
       <article
         className={cn(
-          'max-w-3xl rounded-3xl border px-5 py-4 text-left transition',
+          'min-w-0 max-w-3xl rounded-3xl border px-5 py-4 text-left transition',
           isAssistant
             ? selected
               ? 'border-sky-500/40 bg-sky-500/10 shadow-panel'
@@ -67,11 +66,7 @@ export function ChatMessageBubble({
         </div>
 
         {isAssistant ? (
-          <div className="markdown-body prose prose-invert max-w-none prose-p:leading-7 prose-pre:bg-slate-950">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {`${message.content}${message.streaming ? '▌' : ''}`}
-            </ReactMarkdown>
-          </div>
+          <MarkdownMessage content={message.content} streaming={message.streaming} />
         ) : (
           <p className="whitespace-pre-wrap text-sm leading-7 text-slate-100">{message.content}</p>
         )}

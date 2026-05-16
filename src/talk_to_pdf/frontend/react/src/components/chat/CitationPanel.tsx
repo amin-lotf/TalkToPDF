@@ -1,7 +1,6 @@
 import { ArrowLeft, Bot, FileSearch, Link2, Timer, Waypoints } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
+import { MarkdownMessage } from '@/components/chat/MarkdownMessage'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Panel } from '@/components/ui/Panel'
@@ -213,9 +212,7 @@ export function CitationPanel({ message, onBack }: CitationPanelProps) {
             </div>
           </div>
 
-          <div className="mt-5 markdown-body prose prose-invert max-w-none prose-p:leading-7 prose-pre:bg-slate-950">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-          </div>
+          <MarkdownMessage className="mt-5" content={message.content} />
         </div>
       </Panel>
 

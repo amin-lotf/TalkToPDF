@@ -1,6 +1,6 @@
 # talk_to_pdf/backend/app/application/retrieval/use_cases/build_index_context.py
 from __future__ import annotations
-
+import logging
 import asyncio
 import time
 from typing import Any, Callable
@@ -21,6 +21,7 @@ from talk_to_pdf.backend.app.domain.retrieval.errors import InvalidQuery, IndexN
     InvalidRetrieval
 from talk_to_pdf.backend.app.domain.retrieval.value_objects import ChunkMatch, RerankContext
 
+logger = logging.getLogger(__name__)
 
 class NullProgressSink:
     async def emit(self, event: ProgressEvent) -> None:
@@ -86,7 +87,7 @@ class BuildIndexContextUseCase:
         if top_n > top_k:
             # make it predictable: never ask reranker for more than you retrieved
             top_n = top_k
-
+        logger.warning("top_k=%d, top_n=%d", top_k, top_n)
         # -----------------------------------
         # 1) Authz + ready index (single query)
         # -----------------------------------

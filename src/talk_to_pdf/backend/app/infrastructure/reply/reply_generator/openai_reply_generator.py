@@ -11,21 +11,45 @@ from talk_to_pdf.backend.app.domain.common.value_objects import ReplyGenerationC
 from talk_to_pdf.backend.app.domain.common.enums import ChatRole
 from talk_to_pdf.backend.app.domain.reply.value_objects import GenerateReplyInput
 from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_tokens, count_message_tokens
+import logging
 
-DEFAULT_SYSTEM = ( "You are a helpful assistant.\n"
-                   "Answer using the provided context when relevant.\n"
-                   "- Do NOT use prior knowledge, general knowledge, or training data.\n"
-                    "- Do NOT infer, assume, or fill in missing information.\n"
-                   "If the context does not contain the answer, say you don't know.\n"
-                   "Be concise and correct. \n"
+logger = logging.getLogger(__name__)
 
-                   )
+DEFAULT_SYSTEM = (
+    "You are a helpful assistant.\n"
+    "Answer using the provided context when relevant.\n"
+    "- Do NOT use prior knowledge, general knowledge, or training data.\n"
+    "- Do NOT infer, assume, or fill in missing information.\n"
+    "If the context does not contain the answer, say you don't know.\n"
+    "Be concise and correct.\n"
+    "Format answers in Markdown.\n"
+    """
+Math formatting rules:
 
-CONTEXT_PREAMBLE = ( "Use the following context as your primary source.\n"
-                     "Context:\n" )
+- Use Markdown + LaTeX only.
+- Inline math must use single dollar delimiters: $...$.
+- Display math must use double dollar delimiters on separate lines:
 
+$$
+...
+$$
 
+- Never use square brackets [ ... ] as math delimiters.
+- Never use \\[ ... \\] as math delimiters.
+- Never write equations inside normal prose if they are long.
+- Put each major equation in its own display math block.
+- Preserve valid LaTeX commands exactly, including backslashes.
+- Do not replace backslashes with punctuation or exclamation marks.
+- Do not add random punctuation inside equations.
+- Do not use citations, brackets, or source markers inside math blocks.
+- If you are unsure about an equation, describe it in words instead of writing malformed LaTeX.
+"""
+)
 
+CONTEXT_PREAMBLE = (
+    "Use the following context as the source for your answer.\n"
+    "Context:\n"
+)
 
 
 @dataclass
@@ -42,7 +66,6 @@ class StreamMetrics:
     """Metrics collected during streaming."""
     prompt_breakdown: PromptTokenBreakdown
     completion_tokens: int = 0
-
 
 
 class OpenAIReplyGenerator:
@@ -75,7 +98,7 @@ class OpenAIReplyGenerator:
     def _build_messages(self, inp: GenerateReplyInput) -> tuple[list[BaseMessage], PromptTokenBreakdown]:
         system = inp.system_prompt or DEFAULT_SYSTEM
         context = self._clip(inp.context)
-
+        logger.warning(f'system prompt: {system}')
         # Build system message
         system_msg = SystemMessage(content=system)
         msgs: list[BaseMessage] = [system_msg]
