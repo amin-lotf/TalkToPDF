@@ -76,6 +76,9 @@ services:
     container_name: grobid
     environment:
       JAVA_OPTS: "-Xms1g -Xmx4g"
+    ports:
+      - "8070:8070"   # optional: for host access/debug
+      - "8071:8071"
 
 volumes:
   pgdata:

@@ -63,8 +63,8 @@ export function ProjectWorkspacePage() {
   )
   const [settings, setSettings] = useState<RetrievalSettings>({
     topK: 40,
-    topN: 10,
-    rerankTimeoutS: 2,
+    topN: 20,
+    rerankTimeoutS: 10,
   })
   const transcriptRef = useRef<HTMLDivElement | null>(null)
 
