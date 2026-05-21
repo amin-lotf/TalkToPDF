@@ -61,7 +61,7 @@ export function RetrievalSettingsPanel({
           />
         </label>
         <label className="space-y-2 text-sm">
-          <span className="block min-h-5 whitespace-nowrap text-slate-400">Rerank timeout (s)</span>
+          <span className="block min-h-5 whitespace-nowrap text-slate-400">Rerank timeout</span>
           <Input
             type="number"
             min={0}

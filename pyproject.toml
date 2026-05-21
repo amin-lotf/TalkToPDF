@@ -28,7 +28,9 @@ dependencies = [
     "tiktoken>=0.5.0",
     "uvicorn[standard]>=0.38.0",
     "streamlit>=1.38",
-    "pandas-stubs>=2.2"
+    "pandas-stubs>=2.2",
+    "azure-ai-documentintelligence>=1.0.2",
+    "azure-core>=1.41.0",
 ]
 
 

@@ -80,5 +80,5 @@ def pdf_bytes() -> bytes:
     """
     Read a PDF file from disk and return its bytes.
     """
-    pdf_path=Path("scripts/sample.pdf")
+    pdf_path=Path("scripts/BMW_Group.pdf")
     return pdf_path.read_bytes()
