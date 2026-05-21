@@ -21,6 +21,7 @@ from talk_to_pdf.backend.app.infrastructure.common.token_counter import count_to
 from talk_to_pdf.backend.app.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from talk_to_pdf.backend.app.infrastructure.files.filesystem_storage import FilesystemFileStorage
 from talk_to_pdf.backend.app.infrastructure.indexing.chunkers.block_chunker import DefaultBlockChunker
+from talk_to_pdf.backend.app.infrastructure.indexing.extractors.grobid_pdf_block_extractor import GrobidPdfBlockExtractor
 from talk_to_pdf.backend.app.infrastructure.indexing.extractors.grobid_pdf_to_xml import GrobidPdfToXmlConverter
 from talk_to_pdf.backend.app.infrastructure.indexing.extractors.grobid_tei_block_extractor import GrobidTeiBlockExtractor
 from talk_to_pdf.backend.app.infrastructure.indexing.service import IndexingWorkerService, WorkerDeps
@@ -119,8 +120,11 @@ def _build_real_chunking_worker(*, session, file_storage: FilesystemFileStorage)
 
     return IndexingWorkerService(
         WorkerDeps(
-            pdf_to_xml_converter=GrobidPdfToXmlConverter(base_url=settings.GROBID_URL),
-            block_extractor=GrobidTeiBlockExtractor(),
+            pdf_block_extractor=GrobidPdfBlockExtractor(
+                file_storage=file_storage,
+                pdf_to_xml_converter=GrobidPdfToXmlConverter(base_url=settings.GROBID_URL),
+                xml_block_extractor=GrobidTeiBlockExtractor(),
+            ),
             block_chunker=DefaultBlockChunker(
                 max_chars=settings.CHUNKER_MAX_CHARS,
                 overlap_chars=settings.CHUNKER_OVERLAP,
@@ -128,7 +132,6 @@ def _build_real_chunking_worker(*, session, file_storage: FilesystemFileStorage)
             embedder_factory=UnusedEmbedderFactory(),
             session_factory=session_factory,
             uow_factory=uow_factory,
-            file_storage=file_storage,
         )
     )
 
@@ -243,8 +246,7 @@ async def test_write_chunking_inspection_markdown(session, uow, pdf_bytes, tmp_p
         assert loaded is not None
         _, _, _, storage_path = loaded
 
-    xml = await worker.convert_pdf_to_xml(storage_path=storage_path)
-    blocks = await worker.extract_blocks_from_xml(xml)
+    blocks = await worker.extract_blocks_from_pdf(storage_path=storage_path)
     await worker.create_and_store_chunks(index_id=index_id, blocks=blocks)
 
     async with uow:

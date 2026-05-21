@@ -1,7 +1,7 @@
 """Runtime configuration loaded from environment variables and .env."""
 import json
 import sys
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -205,6 +205,27 @@ class Settings(BaseSettings):
         min_length=1,
         description="Base URL for the Grobid service.",
     )
+    PDF_EXTRACTION_PROVIDER: Literal["grobid", "azure_document_intelligence"] = Field(
+        default="grobid",
+        description="PDF extraction provider used by the indexing worker.",
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = Field(
+        default=None,
+        description="Azure Document Intelligence endpoint.",
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_KEY: str | None = Field(
+        default=None,
+        description="Azure Document Intelligence API key.",
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_MODEL: str = Field(
+        default="prebuilt-layout",
+        min_length=1,
+        description="Azure Document Intelligence model identifier.",
+    )
+    AZURE_DOCUMENT_INTELLIGENCE_OUTPUT_FORMAT: Literal["markdown", "text"] = Field(
+        default="markdown",
+        description="Requested output format for Azure Document Intelligence extraction.",
+    )
     RERANKER_PROVIDER: str = Field(
         default=DEFAULT_RERANKER_PROVIDER,
         min_length=1,
@@ -233,7 +254,12 @@ class Settings(BaseSettings):
         le=1.0,
         description="Weight of the full-text search term in the retrieval merger.")
 
-    @field_validator("OPENAI_API_KEY", mode="before")
+    @field_validator(
+        "OPENAI_API_KEY",
+        "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT",
+        "AZURE_DOCUMENT_INTELLIGENCE_KEY",
+        mode="before",
+    )
     @classmethod
     def _blank_api_key_to_none(cls, v: Any) -> str | None:
         if v is None:
@@ -275,6 +301,18 @@ class Settings(BaseSettings):
     def _check_cross_fields(self) -> "Settings":
         if self.MAX_TOP_N > self.MAX_TOP_K:
             raise ValueError("MAX_TOP_N cannot exceed MAX_TOP_K")
+        if self.PDF_EXTRACTION_PROVIDER == "azure_document_intelligence":
+            missing: list[str] = []
+            if not self.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:
+                missing.append("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
+            if not self.AZURE_DOCUMENT_INTELLIGENCE_KEY:
+                missing.append("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+            if missing:
+                joined = ", ".join(missing)
+                raise ValueError(
+                    f"{joined} must be set when "
+                    "PDF_EXTRACTION_PROVIDER=azure_document_intelligence"
+                )
         return self
 
 

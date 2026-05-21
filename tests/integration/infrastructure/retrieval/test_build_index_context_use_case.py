@@ -35,7 +35,7 @@ from talk_to_pdf.backend.app.infrastructure.db.models import (
     DocumentIndexModel,
 )
 from talk_to_pdf.backend.app.infrastructure.indexing.service import IndexingWorkerService, WorkerDeps
-from tests.unit.fakes.indexing_worker_deps import FakePdfToXmlConverter, FakeBlockExtractor, FakeBlockChunker
+from tests.unit.fakes.indexing_worker_deps import FakePdfBlockExtractor, FakeBlockChunker
 
 pytestmark = pytest.mark.asyncio
 
@@ -181,13 +181,11 @@ async def _seed_ready_index_with_chunks_and_embeds(
 
     worker = IndexingWorkerService(
         WorkerDeps(
-            pdf_to_xml_converter=FakePdfToXmlConverter(xml="<TEI></TEI>"),
-            block_extractor=FakeBlockExtractor(),
+            pdf_block_extractor=FakePdfBlockExtractor(),
             block_chunker=FakeBlockChunker(),
             embedder_factory=None,  # not used here
             session_factory=session_factory,
             uow_factory=uow_factory,
-            file_storage=file_storage,
         )
     )
 
@@ -196,8 +194,7 @@ async def _seed_ready_index_with_chunks_and_embeds(
         uow2 = uow_factory(sess)
         async with uow2:
             _, _, _, storage_path = await worker.load_index_metadata(uow=uow2, index_id=index_id)
-            xml = await worker.convert_pdf_to_xml(storage_path=storage_path)
-            blocks = await worker.extract_blocks_from_xml(xml)
+            blocks = await worker.extract_blocks_from_pdf(storage_path=storage_path)
 
     chunks = await worker.create_and_store_chunks(index_id=index_id, blocks=blocks)
     assert chunks and len(chunks) > 0

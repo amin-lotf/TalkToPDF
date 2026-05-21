@@ -29,20 +29,7 @@ class FakeSessionContext(AsyncContextManager[FakeSession]):
         return None
 
 
-class FakePdfToXmlConverter:
-    def __init__(self, *, xml: str = "<TEI></TEI>", raise_exc: Exception | None = None) -> None:
-        self._xml = xml
-        self._exc = raise_exc
-        self.called_with: list[bytes] = []
-
-    def convert(self, *, content: bytes) -> str:
-        self.called_with.append(content)
-        if self._exc:
-            raise self._exc
-        return self._xml
-
-
-class FakeBlockExtractor:
+class FakePdfBlockExtractor:
     def __init__(self, *, blocks: list[Block] | None = None, raise_exc: Exception | None = None) -> None:
         self._blocks = blocks or [
             Block(
@@ -64,8 +51,8 @@ class FakeBlockExtractor:
         self._exc = raise_exc
         self.called_with: list[str] = []
 
-    def extract(self, *, xml: str) -> list[Block]:
-        self.called_with.append(xml)
+    async def extract(self, *, storage_path: str) -> list[Block]:
+        self.called_with.append(storage_path)
         if self._exc:
             raise self._exc
         return list(self._blocks)

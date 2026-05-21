@@ -1,17 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any, AsyncContextManager, Awaitable, Callable, Optional
 from uuid import UUID
 
-import anyio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from talk_to_pdf.backend.app.application.indexing.interfaces import BlockChunker, BlockExtractor, PdfToXmlConverter
 from talk_to_pdf.backend.app.application.common.interfaces import EmbedderFactory
+from talk_to_pdf.backend.app.application.indexing.interfaces import BlockChunker, PdfBlockExtractor
 from talk_to_pdf.backend.app.application.indexing.indexing_progress import report
 from talk_to_pdf.backend.app.domain.common.uow import UnitOfWork
-from talk_to_pdf.backend.app.domain.files.interfaces import FileStorage
 from talk_to_pdf.backend.app.domain.indexing.enums import IndexStatus, IndexStep, STEP_PROGRESS
 from talk_to_pdf.backend.app.domain.indexing.value_objects import Block, ChunkDraft
 from talk_to_pdf.backend.app.domain.common.value_objects import Vector, EmbedConfig
@@ -26,11 +25,9 @@ def _batched(items: list[Any], batch_size: int) -> list[list[Any]]:
 
 @dataclass(frozen=True, slots=True)
 class WorkerDeps:
-    pdf_to_xml_converter: PdfToXmlConverter
-    block_extractor: BlockExtractor
+    pdf_block_extractor: PdfBlockExtractor
     block_chunker: BlockChunker
     embedder_factory: EmbedderFactory
-    file_storage: FileStorage
     session_factory: Callable[[], AsyncContextManager[AsyncSession]]
     uow_factory: Callable[[AsyncSession], UnitOfWork]
 
@@ -78,28 +75,15 @@ class IndexingWorkerService:
 
         return idx.project_id, idx.document_id, embed_cfg, storage_path
 
-    async def convert_pdf_to_xml(self, storage_path: str) -> str:
+    async def extract_blocks_from_pdf(self, storage_path: str) -> list[Block]:
         try:
-            pdf_bytes = await self.deps.file_storage.read_bytes(storage_path=storage_path)
+            return await self.deps.pdf_block_extractor.extract(storage_path=storage_path)
         except Exception as e:
-            raise RuntimeError("Failed to read PDF file") from e
-
-        try:
-            return await anyio.to_thread.run_sync(
-                lambda: self.deps.pdf_to_xml_converter.convert(content=pdf_bytes)
-            )
-        except Exception as e:
-            raise RuntimeError("Failed to convert PDF to TEI XML") from e
-
-    async def extract_blocks_from_xml(self, xml: str) -> list[Block]:
-        try:
-            return await anyio.to_thread.run_sync(lambda: self.deps.block_extractor.extract(xml=xml))
-        except Exception as e:
-            raise RuntimeError("Failed to parse TEI XML into blocks") from e
+            raise RuntimeError("Failed to extract blocks from PDF") from e
 
     async def create_and_store_chunks(self, *, index_id: UUID, blocks: list[Block]) -> Optional[list[ChunkDraft]]:
         try:
-            chunks = await anyio.to_thread.run_sync(lambda: self.deps.block_chunker.chunk(blocks=blocks))
+            chunks = await asyncio.to_thread(self.deps.block_chunker.chunk, blocks=blocks)
         except Exception as e:
             raise RuntimeError("Failed to chunk blocks") from e
 
@@ -247,25 +231,18 @@ class IndexingWorkerService:
                 index_id=index_id,
                 status=IndexStatus.RUNNING,
                 step=IndexStep.EXTRACTING,
-                message="Converting PDF to TEI XML",
+                message="Extracting document blocks",
             )
         )
 
-        # 3) Convert PDF -> TEI XML (no DB session held)
+        # 3) Extract blocks from the source PDF (no DB session held)
         try:
-            xml = await self.convert_pdf_to_xml(storage_path)
+            blocks = await self.extract_blocks_from_pdf(storage_path)
         except Exception as e:
             await self._with_uow(lambda uow: self.mark_failed(uow=uow, index_id=index_id, error=str(e)))
             return
 
-        # 4) Extract blocks (no DB session held)
-        try:
-            blocks = await self.extract_blocks_from_xml(xml)
-        except Exception as e:
-            await self._with_uow(lambda uow: self.mark_failed(uow=uow, index_id=index_id, error=str(e)))
-            return
-
-        # 5) Report: chunking (short DB transaction)
+        # 4) Report: chunking (short DB transaction)
         await self._with_uow(
             lambda uow: report(
                 uow=uow,
@@ -276,7 +253,7 @@ class IndexingWorkerService:
             )
         )
 
-        # 6) Chunk + persist (chunking itself is pure; persistence uses short DB transaction)
+        # 5) Chunk + persist (chunking itself is pure; persistence uses short DB transaction)
         try:
             chunks = await self.create_and_store_chunks(index_id=index_id, blocks=blocks)
         except Exception as e:
@@ -284,7 +261,7 @@ class IndexingWorkerService:
             return
         if not chunks:
             return
-        # 7) Embed (batched)
+        # 6) Embed (batched)
         embeds = await self.embed_chunks(index_id=index_id, chunks=chunks,embed_cfg=embed_cfg)
         if embeds is None:
             return

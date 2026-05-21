@@ -15,7 +15,7 @@ from talk_to_pdf.backend.app.domain.common.value_objects import EmbedConfig
 
 def get_chunker_version() -> str:
     return (
-        f"{settings.CHUNKER_KIND}:"
+        f"{settings.PDF_EXTRACTION_PROVIDER}:{settings.CHUNKER_KIND}:"
         f"{settings.CHUNKER_MAX_CHARS}-{settings.CHUNKER_OVERLAP}"
     )
 

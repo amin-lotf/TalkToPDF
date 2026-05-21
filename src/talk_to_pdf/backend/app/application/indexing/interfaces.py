@@ -19,10 +19,13 @@ class PdfToXmlConverter(Protocol):
     def convert(self, *, content: bytes) -> str: ...
 
 
-class BlockExtractor(Protocol):
+class XmlBlockExtractor(Protocol):
     def extract(self, *, xml: str) -> list[Block]: ...
+
+
+class PdfBlockExtractor(Protocol):
+    async def extract(self, *, storage_path: str) -> list[Block]: ...
 
 
 class BlockChunker(Protocol):
     def chunk(self, *, blocks: list[Block]) -> list[ChunkDraft]: ...
-
