@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
+const DEFAULT_API_BASE_URL = '/api/v1'
 
 function resolveBaseUrl(baseUrl: string) {
   return new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`, window.location.origin)

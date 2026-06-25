@@ -1,10 +1,10 @@
 """Runtime configuration loaded from environment variables and .env."""
 import json
 import sys
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from talk_to_pdf.backend.app.core.const import (
     DEFAULT_CHUNKER_KIND,
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         min_length=1,
         description="Base directory for storing uploaded files and artifacts.",
     )
-    CORS_ALLOWED_ORIGINS: list[str] = Field(
+    CORS_ALLOWED_ORIGINS: Annotated[list[str], NoDecode] = Field(
         default=DEFAULT_CORS_ALLOWED_ORIGINS,
         description="Allowed browser origins for the React frontend and local previews.",
     )
